@@ -87,6 +87,69 @@
     {
       "away": "CHE",
       "away_score": 0,
+      "bonus_race": [
+        {
+          "bonus": 3,
+          "bps": 43,
+          "player": 93
+        },
+        {
+          "bonus": 2,
+          "bps": 31,
+          "player": 105
+        },
+        {
+          "bonus": 1,
+          "bps": 29,
+          "player": 87
+        },
+        {
+          "bonus": 0,
+          "bps": 27,
+          "player": 82
+        },
+        {
+          "bonus": 0,
+          "bps": 27,
+          "player": 94
+        }
+      ],
+      "events": {
+        "assists": [
+          {
+            "count": 1,
+            "player": 93
+          },
+          {
+            "count": 2,
+            "player": 94
+          }
+        ],
+        "cards": [
+          {
+            "colour": "yellow",
+            "player": 106
+          },
+          {
+            "colour": "yellow",
+            "player": 565
+          }
+        ],
+        "goals": [
+          {
+            "count": 1,
+            "player": 100
+          },
+          {
+            "count": 1,
+            "player": 105
+          },
+          {
+            "count": 1,
+            "player": 106
+          }
+        ]
+      },
       "finished": true,
       "fixture": 41,
       "highlights": null,
@@ -142,6 +205,93 @@
     {
       "away": "AVL",
       "away_score": 3,
+      "bonus_race": [
+        {
+          "bonus": 3,
+          "bps": 50,
+          "player": 41
+        },
+        {
+          "bonus": 2,
+          "bps": 45,
+          "player": 53
+        },
+        {
+          "bonus": 1,
+          "bps": 31,
+          "player": 166
+        },
+        {
+          "bonus": 0,
+          "bps": 29,
+          "player": 403
+        },
+        {
+          "bonus": 0,
+          "bps": 26,
+          "player": 47
+        }
+      ],
+      "events": {
+        "assists": [
+          {
+            "count": 1,
+            "player": 45
+          },
+          {
+            "count": 1,
+            "player": 47
+          },
+          {
+            "count": 1,
+            "player": 53
+          },
+          {
+            "count": 1,
+            "player": 502
+          },
+          {
+            "count": 1,
+            "player": 512
+          }
+        ],
+        "cards": [
+          {
+            "colour": "yellow",
+            "player": 32
+          },
+          {
+            "colour": "yellow",
+            "player": 112
+          },
+          {
+            "colour": "yellow",
+            "player": 166
+          }
+        ],
+        "goals": [
+          {
+            "count": 1,
+            "player": 41
+          },
+          {
+            "count": 1,
+            "player": 53
+          },
+          {
+            "count": 1,
+            "player": 112
+          },
+          {
+            "count": 1,
+            "player": 166
+          },
+          {
+            "count": 1,
+            "player": 519
+          }
+        ]
+      },
       "finished": true,
       "fixture": 48,
       "highlights": null,
@@ -156,6 +306,85 @@
     {
       "away": "ARS",
       "away_score": 0,
+      "bonus_race": [
+        {
+          "bonus": 3,
+          "bps": 47,
+          "player": 124
+        },
+        {
+          "bonus": 2,
+          "bps": 40,
+          "player": 138
+        },
+        {
+          "bonus": 1,
+          "bps": 30,
+          "player": 115
+        },
+        {
+          "bonus": 0,
+          "bps": 27,
+          "player": 109
+        },
+        {
+          "bonus": 0,
+          "bps": 27,
+          "player": 504
+        }
+      ],
+      "events": {
+        "assists": [
+          {
+            "count": 1,
+            "player": 124
+          },
+          {
+            "count": 1,
+            "player": 127
+          },
+          {
+            "count": 1,
+            "player": 138
+          }
+        ],
+        "cards": [
+          {
+            "colour": "yellow",
+            "player": 13
+          },
+          {
+            "colour": "yellow",
+            "player": 113
+          },
+          {
+            "colour": "yellow",
+            "player": 115
+          },
+          {
+            "colour": "yellow",
+            "player": 138
+          },
+          {
+            "colour": "yellow",
+            "player": 328
+          }
+        ],
+        "goals": [
+          {
+            "count": 1,
+            "player": 124
+          },
+          {
+            "count": 1,
+            "player": 138
+          },
+          {
+            "count": 1,
+            "player": 639
+          }
+        ]
+      },
       "finished": true,
       "fixture": 42,
       "highlights": null,
@@ -271,6 +500,65 @@
     {
       "away": "IPS",
       "away_score": 0,
+      "bonus_race": [
+        {
+          "bonus": 3,
+          "bps": 43,
+          "player": 229
+        },
+        {
+          "bonus": 2,
+          "bps": 39,
+          "player": 649
+        },
+        {
+          "bonus": 1,
+          "bps": 34,
+          "player": 226
+        },
+        {
+          "bonus": 0,
+          "bps": 29,
+          "player": 233
+        },
+        {
+          "bonus": 0,
+          "bps": 28,
+          "player": 249
+        }
+      ],
+      "events": {
+        "assists": [
+          {
+            "count": 1,
+            "player": 229
+          }
+        ],
+        "cards": [
+          {
+            "colour": "yellow",
+            "player": 233
+          },
+          {
+            "colour": "yellow",
+            "player": 244
+          },
+          {
+            "colour": "red",
+            "player": 315
+          },
+          {
+            "colour": "yellow",
+            "player": 640
+          }
+        ],
+        "goals": [
+          {
+            "count": 1,
+            "player": 249
+          }
+        ]
+      },
       "finished": true,
       "fixture": 43,
       "highlights": null,
@@ -306,6 +594,85 @@
     {
       "away": "HUL",
       "away_score": 1,
+      "bonus_race": [
+        {
+          "bonus": 3,
+          "bps": 38,
+          "player": 449
+        },
+        {
+          "bonus": 3,
+          "bps": 38,
+          "player": 460
+        },
+        {
+          "bonus": 1,
+          "bps": 34,
+          "player": 453
+        },
+        {
+          "bonus": 0,
+          "bps": 25,
+          "player": 617
+        },
+        {
+          "bonus": 0,
+          "bps": 22,
+          "player": 286
+        }
+      ],
+      "events": {
+        "assists": [
+          {
+            "count": 1,
+            "player": 286
+          },
+          {
+            "count": 2,
+            "player": 453
+          }
+        ],
+        "cards": [
+          {
+            "colour": "yellow",
+            "player": 282
+          },
+          {
+            "colour": "yellow",
+            "player": 286
+          },
+          {
+            "colour": "yellow",
+            "player": 289
+          },
+          {
+            "colour": "yellow",
+            "player": 295
+          },
+          {
+            "colour": "yellow",
+            "player": 457
+          },
+          {
+            "colour": "yellow",
+            "player": 572
+          }
+        ],
+        "goals": [
+          {
+            "count": 1,
+            "player": 449
+          },
+          {
+            "count": 1,
+            "player": 460
+          },
+          {
+            "count": 1,
+            "player": 617
+          }
+        ]
+      },
       "finished": true,
       "fixture": 46,
       "highlights": null,
@@ -341,6 +708,57 @@
     {
       "away": "COV",
       "away_score": 1,
+      "bonus_race": [
+        {
+          "bonus": 3,
+          "bps": 40,
+          "player": 176
+        },
+        {
+          "bonus": 2,
+          "bps": 38,
+          "player": 110
+        },
+        {
+          "bonus": 1,
+          "bps": 37,
+          "player": 173
+        },
+        {
+          "bonus": 0,
+          "bps": 27,
+          "player": 656
+        },
+        {
+          "bonus": 0,
+          "bps": 25,
+          "player": 480
+        }
+      ],
+      "events": {
+        "assists": [
+          {
+            "count": 1,
+            "player": 110
+          }
+        ],
+        "cards": [
+          {
+            "colour": "yellow",
+            "player": 167
+          },
+          {
+            "colour": "yellow",
+            "player": 474
+          }
+        ],
+        "goals": [
+          {
+            "count": 1,
+            "player": 176
+          }
+        ]
+      },
       "finished": true,
       "fixture": 47,
       "highlights": null,
@@ -355,6 +773,59 @@
     {
       "away": "CRY",
       "away_score": 0,
+      "bonus_race": [
+        {
+          "bonus": 3,
+          "bps": 34,
+          "player": 385
+        },
+        {
+          "bonus": 2,
+          "bps": 31,
+          "player": 332
+        },
+        {
+          "bonus": 1,
+          "bps": 30,
+          "player": 204
+        },
+        {
+          "bonus": 0,
+          "bps": 29,
+          "player": 202
+        },
+        {
+          "bonus": 0,
+          "bps": 27,
+          "player": 331
+        }
+      ],
+      "events": {
+        "assists": [],
+        "cards": [
+          {
+            "colour": "yellow",
+            "player": 210
+          },
+          {
+            "colour": "yellow",
+            "player": 211
+          },
+          {
+            "colour": "yellow",
+            "player": 213
+          },
+          {
+            "colour": "yellow",
+            "player": 330
+          },
+          {
+            "colour": "yellow",
+            "player": 345
+          }
+        ],
+        "goals": []
+      },
       "finished": true,
       "fixture": 44,
       "highlights": null,
@@ -390,6 +861,93 @@
     {
       "away": "SUN",
       "away_score": 3,
+      "bonus_race": [
+        {
+          "bonus": 3,
+          "bps": 92,
+          "player": 552
+        },
+        {
+          "bonus": 2,
+          "bps": 65,
+          "player": 397
+        },
+        {
+          "bonus": 1,
+          "bps": 35,
+          "player": 399
+        },
+        {
+          "bonus": 0,
+          "bps": 33,
+          "player": 155
+        },
+        {
+          "bonus": 0,
+          "bps": 33,
+          "player": 542
+        }
+      ],
+      "events": {
+        "assists": [
+          {
+            "count": 1,
+            "player": 237
+          },
+          {
+            "count": 1,
+            "player": 388
+          },
+          {
+            "count": 1,
+            "player": 391
+          },
+          {
+            "count": 1,
+            "player": 397
+          },
+          {
+            "count": 1,
+            "player": 541
+          },
+          {
+            "count": 1,
+            "player": 542
+          },
+          {
+            "count": 1,
+            "player": 551
+          }
+        ],
+        "cards": [
+          {
+            "colour": "yellow",
+            "player": 612
+          }
+        ],
+        "goals": [
+          {
+            "count": 1,
+            "player": 155
+          },
+          {
+            "count": 2,
+            "player": 397
+          },
+          {
+            "count": 1,
+            "player": 399
+          },
+          {
+            "count": 1,
+            "player": 411
+          },
+          {
+            "count": 3,
+            "player": 552
+          }
+        ]
+      },
       "finished": true,
       "fixture": 45,
       "highlights": null,
@@ -465,6 +1023,61 @@
     {
       "away": "LIV",
       "away_score": 1,
+      "bonus_race": [
+        {
+          "bonus": 3,
+          "bps": 31,
+          "player": 379
+        },
+        {
+          "bonus": 2,
+          "bps": 30,
+          "player": 350
+        },
+        {
+          "bonus": 1,
+          "bps": 28,
+          "player": 579
+        },
+        {
+          "bonus": 0,
+          "bps": 26,
+          "player": 356
+        },
+        {
+          "bonus": 0,
+          "bps": 26,
+          "player": 362
+        }
+      ],
+      "events": {
+        "assists": [
+          {
+            "count": 1,
+            "player": 366
+          }
+        ],
+        "cards": [
+          {
+            "colour": "yellow",
+            "player": 368
+          },
+          {
+            "colour": "yellow",
+            "player": 379
+          },
+          {
+            "colour": "yellow",
+            "player": 566
+          }
+        ],
+        "goals": [
+          {
+            "count": 1,
+            "player": 379
+          }
+        ]
+      },
       "finished": true,
       "fixture": 49,
       "highlights": null,
@@ -520,6 +1133,65 @@
     {
       "away": "MUN",
       "away_score": 1,
+      "bonus_race": [
+        {
+          "bonus": 3,
+          "bps": 32,
+          "player": 428
+        },
+        {
+          "bonus": 2,
+          "bps": 27,
+          "player": 261
+        },
+        {
+          "bonus": 1,
+          "bps": 26,
+          "player": 257
+        },
+        {
+          "bonus": 0,
+          "bps": 23,
+          "player": 427
+        },
+        {
+          "bonus": 0,
+          "bps": 22,
+          "player": 43
+        }
+      ],
+      "events": {
+        "assists": [
+          {
+            "count": 1,
+            "player": 257
+          },
+          {
+            "count": 1,
+            "player": 415
+          }
+        ],
+        "cards": [
+          {
+            "colour": "yellow",
+            "player": 258
+          },
+          {
+            "colour": "yellow",
+            "player": 268
+          },
+          {
+            "colour": "yellow",
+            "player": 271
+          }
+        ],
+        "goals": [
+          {
+            "count": 1,
+            "player": 428
+          }
+        ]
+      },
       "finished": true,
       "fixture": 50,
       "highlights": null,
@@ -532,5 +1204,1216 @@
       "yours": []
     }
   ],
+  "people": {
+    "100": {
+      "by_gameweek": {},
+      "chance": 100,
+      "id": 100,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.0,
+      "status": "a",
+      "team": "BRE",
+      "web_name": "Carvalho",
+      "xp": 0
+    },
+    "105": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 105,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.9,
+      "status": "a",
+      "team": "BRE",
+      "web_name": "Anthony",
+      "xp": 0
+    },
+    "106": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 106,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "FWD",
+      "price": 7.8,
+      "status": "a",
+      "team": "BRE",
+      "web_name": "Thiago",
+      "xp": 0
+    },
+    "109": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 109,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "GK",
+      "price": 4.5,
+      "status": "a",
+      "team": "BHA",
+      "web_name": "Verbruggen",
+      "xp": 0
+    },
+    "110": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 110,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "GK",
+      "price": 4.5,
+      "status": "a",
+      "team": "COV",
+      "web_name": "Rushworth",
+      "xp": 0
+    },
+    "112": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 112,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.9,
+      "status": "a",
+      "team": "TOT",
+      "web_name": "Van Hecke",
+      "xp": 0
+    },
+    "113": {
+      "by_gameweek": {},
+      "chance": 100,
+      "id": 113,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.4,
+      "status": "a",
+      "team": "BHA",
+      "web_name": "F.Kad\u0131o\u011flu",
+      "xp": 0
+    },
+    "115": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 115,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.9,
+      "status": "a",
+      "team": "BHA",
+      "web_name": "De Cuyper",
+      "xp": 0
+    },
+    "124": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 124,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.8,
+      "status": "a",
+      "team": "BHA",
+      "web_name": "Gro\u00df",
+      "xp": 0
+    },
+    "127": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 127,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.0,
+      "status": "a",
+      "team": "BHA",
+      "web_name": "Gomez",
+      "xp": 0
+    },
+    "13": {
+      "by_gameweek": {},
+      "chance": 75,
+      "id": 13,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 7.4,
+      "status": "d",
+      "team": "ARS",
+      "web_name": "Rice",
+      "xp": 0
+    },
+    "138": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 138,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "FWD",
+      "price": 5.6,
+      "status": "a",
+      "team": "BHA",
+      "web_name": "Kostoulas",
+      "xp": 0
+    },
+    "155": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 155,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 6.9,
+      "status": "a",
+      "team": "MCI",
+      "web_name": "Enzo",
+      "xp": 0
+    },
+    "166": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 166,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "FWD",
+      "price": 6.5,
+      "status": "a",
+      "team": "AVL",
+      "web_name": "N.Jackson",
+      "xp": 0
+    },
+    "167": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 167,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "FWD",
+      "price": 5.6,
+      "status": "a",
+      "team": "NFO",
+      "web_name": "Delap",
+      "xp": 0
+    },
+    "173": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 173,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.0,
+      "status": "a",
+      "team": "COV",
+      "web_name": "Thomas",
+      "xp": 0
+    },
+    "176": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 176,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.0,
+      "status": "a",
+      "team": "COV",
+      "web_name": "Dasilva",
+      "xp": 0
+    },
+    "202": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 202,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 5.0,
+      "status": "a",
+      "team": "CRY",
+      "web_name": "Richards",
+      "xp": 0
+    },
+    "204": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 204,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.5,
+      "status": "a",
+      "team": "CRY",
+      "web_name": "Mitchell",
+      "xp": 0
+    },
+    "210": {
+      "by_gameweek": {},
+      "chance": 100,
+      "id": 210,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.5,
+      "status": "a",
+      "team": "CRY",
+      "web_name": "Wharton",
+      "xp": 0
+    },
+    "211": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 211,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.5,
+      "status": "a",
+      "team": "CRY",
+      "web_name": "Yeremy",
+      "xp": 0
+    },
+    "213": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 213,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 4.8,
+      "status": "a",
+      "team": "CRY",
+      "web_name": "Lerma",
+      "xp": 0
+    },
+    "226": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 226,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "GK",
+      "price": 5.5,
+      "status": "a",
+      "team": "EVE",
+      "web_name": "Pickford",
+      "xp": 0
+    },
+    "229": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 229,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 6.1,
+      "status": "a",
+      "team": "EVE",
+      "web_name": "Tarkowski",
+      "xp": 0
+    },
+    "233": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 233,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.6,
+      "status": "a",
+      "team": "EVE",
+      "web_name": "Mykolenko",
+      "xp": 0
+    },
+    "237": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 237,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.8,
+      "status": "a",
+      "team": "MCI",
+      "web_name": "Ndiaye",
+      "xp": 0
+    },
+    "244": {
+      "by_gameweek": {},
+      "chance": 100,
+      "id": 244,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.0,
+      "status": "a",
+      "team": "EVE",
+      "web_name": "Armstrong",
+      "xp": 0
+    },
+    "249": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 249,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "FWD",
+      "price": 5.6,
+      "status": "a",
+      "team": "EVE",
+      "web_name": "Barry",
+      "xp": 0
+    },
+    "257": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 257,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.5,
+      "status": "a",
+      "team": "FUL",
+      "web_name": "Bassey",
+      "xp": 0
+    },
+    "258": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 258,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.5,
+      "status": "a",
+      "team": "FUL",
+      "web_name": "Castagne",
+      "xp": 0
+    },
+    "261": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 261,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.4,
+      "status": "a",
+      "team": "FUL",
+      "web_name": "Iwobi",
+      "xp": 0
+    },
+    "268": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 268,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.5,
+      "status": "a",
+      "team": "FUL",
+      "web_name": "King",
+      "xp": 0
+    },
+    "271": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 271,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "FWD",
+      "price": 5.4,
+      "status": "a",
+      "team": "FUL",
+      "web_name": "Muniz",
+      "xp": 0
+    },
+    "282": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 282,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.0,
+      "status": "a",
+      "team": "HUL",
+      "web_name": "Giles",
+      "xp": 0
+    },
+    "286": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 286,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.1,
+      "status": "a",
+      "team": "HUL",
+      "web_name": "Belloumi",
+      "xp": 0
+    },
+    "289": {
+      "by_gameweek": {},
+      "chance": 100,
+      "id": 289,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 4.4,
+      "status": "a",
+      "team": "HUL",
+      "web_name": "Crooks",
+      "xp": 0
+    },
+    "295": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 295,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "FWD",
+      "price": 5.5,
+      "status": "a",
+      "team": "HUL",
+      "web_name": "McBurnie",
+      "xp": 0
+    },
+    "315": {
+      "by_gameweek": {},
+      "chance": 0,
+      "id": 315,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.4,
+      "status": "s",
+      "team": "IPS",
+      "web_name": "Fatawu",
+      "xp": 0
+    },
+    "32": {
+      "by_gameweek": {},
+      "chance": 100,
+      "id": 32,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.4,
+      "status": "a",
+      "team": "AVL",
+      "web_name": "Cash",
+      "xp": 0
+    },
+    "328": {
+      "by_gameweek": {},
+      "chance": 75,
+      "id": 328,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.9,
+      "status": "d",
+      "team": "BHA",
+      "web_name": "Struijk",
+      "xp": 0
+    },
+    "330": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 330,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.6,
+      "status": "a",
+      "team": "LEE",
+      "web_name": "Bogle",
+      "xp": 0
+    },
+    "331": {
+      "by_gameweek": {},
+      "chance": 100,
+      "id": 331,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.5,
+      "status": "a",
+      "team": "LEE",
+      "web_name": "Gudmundsson",
+      "xp": 0
+    },
+    "332": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 332,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.5,
+      "status": "a",
+      "team": "LEE",
+      "web_name": "Justin",
+      "xp": 0
+    },
+    "345": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 345,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 4.9,
+      "status": "a",
+      "team": "LEE",
+      "web_name": "Tanaka",
+      "xp": 0
+    },
+    "350": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 350,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "GK",
+      "price": 5.5,
+      "status": "a",
+      "team": "LIV",
+      "web_name": "A.Becker",
+      "xp": 0
+    },
+    "356": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 356,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 6.5,
+      "status": "a",
+      "team": "LIV",
+      "web_name": "Virgil",
+      "xp": 0
+    },
+    "362": {
+      "by_gameweek": {},
+      "chance": 100,
+      "id": 362,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 5.0,
+      "status": "a",
+      "team": "LIV",
+      "web_name": "Jacquet",
+      "xp": 0
+    },
+    "366": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 366,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 7.3,
+      "status": "a",
+      "team": "LIV",
+      "web_name": "Wirtz",
+      "xp": 0
+    },
+    "368": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 368,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 7.0,
+      "status": "a",
+      "team": "LIV",
+      "web_name": "Szoboszlai",
+      "xp": 0
+    },
+    "379": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 379,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "FWD",
+      "price": 9.1,
+      "status": "a",
+      "team": "LIV",
+      "web_name": "Isak",
+      "xp": 0
+    },
+    "385": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 385,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "GK",
+      "price": 5.0,
+      "status": "a",
+      "team": "LEE",
+      "web_name": "Trafford",
+      "xp": 0
+    },
+    "388": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 388,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 6.0,
+      "status": "a",
+      "team": "MCI",
+      "web_name": "Gu\u00e9hi",
+      "xp": 0
+    },
+    "391": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 391,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 5.7,
+      "status": "a",
+      "team": "MCI",
+      "web_name": "Gvardiol",
+      "xp": 0
+    },
+    "397": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 397,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 8.4,
+      "status": "a",
+      "team": "MCI",
+      "web_name": "Semenyo",
+      "xp": 0
+    },
+    "399": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 399,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 7.8,
+      "status": "a",
+      "team": "MCI",
+      "web_name": "Cherki",
+      "xp": 0
+    },
+    "403": {
+      "by_gameweek": {},
+      "chance": 100,
+      "id": 403,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 6.5,
+      "status": "a",
+      "team": "TOT",
+      "web_name": "S\u00e1vio",
+      "xp": 0
+    },
+    "41": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 41,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.9,
+      "status": "a",
+      "team": "AVL",
+      "web_name": "Buend\u00eda",
+      "xp": 0
+    },
+    "411": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 411,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "FWD",
+      "price": 15.6,
+      "status": "a",
+      "team": "MCI",
+      "web_name": "Haaland",
+      "xp": 0
+    },
+    "415": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 415,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.8,
+      "status": "a",
+      "team": "MUN",
+      "web_name": "Dorgu",
+      "xp": 0
+    },
+    "427": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 427,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 7.9,
+      "status": "a",
+      "team": "MUN",
+      "web_name": "Mbeumo",
+      "xp": 0
+    },
+    "428": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 428,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 7.9,
+      "status": "a",
+      "team": "MUN",
+      "web_name": "Cunha",
+      "xp": 0
+    },
+    "43": {
+      "by_gameweek": {},
+      "chance": 100,
+      "id": 43,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.8,
+      "status": "a",
+      "team": "MUN",
+      "web_name": "Tielemans",
+      "xp": 0
+    },
+    "449": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 449,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 5.3,
+      "status": "a",
+      "team": "NEW",
+      "web_name": "Hall",
+      "xp": 0
+    },
+    "45": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 45,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.4,
+      "status": "a",
+      "team": "AVL",
+      "web_name": "McGinn",
+      "xp": 0
+    },
+    "453": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 453,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 6.1,
+      "status": "a",
+      "team": "NEW",
+      "web_name": "Barnes",
+      "xp": 0
+    },
+    "457": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 457,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.9,
+      "status": "a",
+      "team": "NEW",
+      "web_name": "J.Murphy",
+      "xp": 0
+    },
+    "460": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 460,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.0,
+      "status": "a",
+      "team": "NEW",
+      "web_name": "Willock",
+      "xp": 0
+    },
+    "47": {
+      "by_gameweek": {},
+      "chance": 100,
+      "id": 47,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.0,
+      "status": "a",
+      "team": "AVL",
+      "web_name": "Kamara",
+      "xp": 0
+    },
+    "474": {
+      "by_gameweek": {},
+      "chance": 100,
+      "id": 474,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.5,
+      "status": "a",
+      "team": "NFO",
+      "web_name": "Jair Cunha",
+      "xp": 0
+    },
+    "480": {
+      "by_gameweek": {},
+      "chance": 100,
+      "id": 480,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 8.0,
+      "status": "a",
+      "team": "NFO",
+      "web_name": "Gibbs-White",
+      "xp": 0
+    },
+    "502": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 502,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.4,
+      "status": "a",
+      "team": "TOT",
+      "web_name": "Robertson",
+      "xp": 0
+    },
+    "504": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 504,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 5.0,
+      "status": "a",
+      "team": "BHA",
+      "web_name": "Vuskovic",
+      "xp": 0
+    },
+    "512": {
+      "by_gameweek": {},
+      "chance": 100,
+      "id": 512,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 6.5,
+      "status": "a",
+      "team": "TOT",
+      "web_name": "Kudus",
+      "xp": 0
+    },
+    "519": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 519,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.3,
+      "status": "a",
+      "team": "TOT",
+      "web_name": "Gallagher",
+      "xp": 0
+    },
+    "53": {
+      "by_gameweek": {},
+      "chance": 100,
+      "id": 53,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.9,
+      "status": "a",
+      "team": "AVL",
+      "web_name": "Manzambi",
+      "xp": 0
+    },
+    "541": {
+      "by_gameweek": {},
+      "chance": 100,
+      "id": 541,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.5,
+      "status": "a",
+      "team": "SUN",
+      "web_name": "Meunier",
+      "xp": 0
+    },
+    "542": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 542,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.7,
+      "status": "a",
+      "team": "SUN",
+      "web_name": "E.Le F\u00e9e",
+      "xp": 0
+    },
+    "551": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 551,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.0,
+      "status": "a",
+      "team": "SUN",
+      "web_name": "N.Angulo",
+      "xp": 0
+    },
+    "552": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 552,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "FWD",
+      "price": 5.7,
+      "status": "a",
+      "team": "SUN",
+      "web_name": "Brobbey",
+      "xp": 0
+    },
+    "565": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 565,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.6,
+      "status": "a",
+      "team": "BRE",
+      "web_name": "M.Sangar\u00e9",
+      "xp": 0
+    },
+    "566": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 566,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 5.0,
+      "status": "a",
+      "team": "BOU",
+      "web_name": "Silva",
+      "xp": 0
+    },
+    "572": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 572,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "GK",
+      "price": 4.6,
+      "status": "a",
+      "team": "HUL",
+      "web_name": "Tzolakis",
+      "xp": 0
+    },
+    "579": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 579,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 5.4,
+      "status": "a",
+      "team": "LIV",
+      "web_name": "Araujo",
+      "xp": 0
+    },
+    "612": {
+      "by_gameweek": {},
+      "chance": 100,
+      "id": 612,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.5,
+      "status": "a",
+      "team": "SUN",
+      "web_name": "Methalie",
+      "xp": 0
+    },
+    "617": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 617,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.0,
+      "status": "a",
+      "team": "HUL",
+      "web_name": "Cho",
+      "xp": 0
+    },
+    "639": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 639,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 5.5,
+      "status": "a",
+      "team": "BHA",
+      "web_name": "Andr\u00e9s",
+      "xp": 0
+    },
+    "640": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 640,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "FWD",
+      "price": 5.5,
+      "status": "a",
+      "team": "IPS",
+      "web_name": "Flemming",
+      "xp": 0
+    },
+    "649": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 649,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.5,
+      "status": "a",
+      "team": "EVE",
+      "web_name": "Maitland-Niles",
+      "xp": 0
+    },
+    "656": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 656,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.0,
+      "status": "a",
+      "team": "COV",
+      "web_name": "Mfuni",
+      "xp": 0
+    },
+    "82": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 82,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "GK",
+      "price": 5.0,
+      "status": "a",
+      "team": "BRE",
+      "web_name": "Kelleher",
+      "xp": 0
+    },
+    "87": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 87,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.5,
+      "status": "a",
+      "team": "BRE",
+      "web_name": "Ajer",
+      "xp": 0
+    },
+    "93": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 93,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "DEF",
+      "price": 4.5,
+      "status": "a",
+      "team": "BRE",
+      "web_name": "Schuster",
+      "xp": 0
+    },
+    "94": {
+      "by_gameweek": {},
+      "chance": null,
+      "id": 94,
+      "leaving": null,
+      "minutes_weight": 1.0,
+      "position": "MID",
+      "price": 6.2,
+      "status": "a",
+      "team": "BRE",
+      "web_name": "Schade",
+      "xp": 0
+    }
+  },
   "yours_known": true
 }

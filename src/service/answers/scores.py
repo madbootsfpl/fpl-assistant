@@ -163,24 +163,106 @@ def _yours(rows, squad, by_code, players) -> list:
     ⚠️ **Points come from `player_history`, never computed here.** FPL settles bonus after full time, and
     ⭐ *a total this app worked out itself would disagree with the one FPL shows, which is worse than
     showing none.*
+
+    ⭐⭐ **The player stays a full `player_summary` here, and that is a compatibility decision, not a
+    design one** (ADR-360). Making him an id into `people` would describe each man once — eleven travel
+    twice today — but 🔴 **build 45 parses this field as an object** (`json['player'] as Map`), Render
+    deploys on push, and the nine would have had a broken Scores screen the moment the server moved,
+    before any of them could update. ⚠️⚠️ *An additive change reaches old clients harmlessly; a changed
+    field does not*, and the ~2 KB is the price of not breaking a shipped build.
+
+    📌 So `events` and `bonus_race` reference `people` by id and `yours` does not. The inconsistency is
+    deliberate and paid for; it can go the next time this field changes shape for another reason.
     """
     out = []
     for code, player_id in squad:
         for r in by_code.get(code, ()):
             if r["fixture"] in rows:
                 row = players.get(player_id)
+                if row is None:
+                    continue
                 out.append({
-                    # ⭐⭐ **The player is a `player_summary`, and the week sits beside him** (ADR-227).
-                    # ⚠️ The first version of this was a flat dict of `id` + stats — a *second* player
-                    # shape, which is the exact mistake `gameweek_result` records making and
-                    # `test_player_shape.py` caught here within minutes, as it did there.
-                    "player": player_summary(row, {}, {}, {}) if row else None,
+                    "player": player_summary(row, {}, {}, {}),
                     "minutes": r["minutes"],
                     "goals": r["goals_scored"],
                     "assists": r["assists"],
                     "points": r["total_points"],
                     "bonus": r["bonus"],
                 })
+    return out
+
+
+#: How many of a match's players the bonus race names. ⭐ Three bonus points are awarded, and the two or
+#: three behind them are the ones that can still overtake while the award is provisional (ADR-356).
+BONUS_RACE = 5
+
+
+def _events(rows, by_code, named) -> dict:
+    """Goals, assists and cards for one match — **everyone's, not just the manager's** (ADR-360).
+
+    ⚠️⚠️ **Goals and assists are two lists, and FPL links them to nothing.** A scorer is never paired with
+    an assister here. Brentford 1-2 Liverpool: Brentford's pair is forced (one goal, one assist) and
+    Liverpool's is not — Wirtz and Barcola each set up one of Munoz and Isak and the data cannot say which.
+    ⭐⭐ *Pairing two sorted lists is the ADR-351 mistake*, and the first mockup of this card made it.
+    """
+    out = {"goals": [], "assists": [], "cards": []}
+    for r in rows:
+        player = by_code.get(r["element_code"])
+        if player is None:
+            continue
+        # ⚠️⚠️ **Named only when he is actually referenced.** The first version added every player with a
+        # history row — all twenty-two, then all 667 across a gameweek, for a sidecar of **126 KB**.
+        # ⭐ *That is the ADR-227 payload sin committed inside the fix that cites it*, and it was invisible
+        # until the bytes were counted.
+        if r["goals_scored"]:
+            named.add(player["id"])
+            out["goals"].append({"player": player["id"], "count": r["goals_scored"]})
+        if r["assists"]:
+            named.add(player["id"])
+            out["assists"].append({"player": player["id"], "count": r["assists"]})
+        # ⭐ Red first: a player sent off for a second yellow has both, and the red is the fact.
+        if r["red_cards"]:
+            named.add(player["id"])
+            out["cards"].append({"player": player["id"], "colour": "red"})
+        elif r["yellow_cards"]:
+            named.add(player["id"])
+            out["cards"].append({"player": player["id"], "colour": "yellow"})
+    return out
+
+
+def _bonus_race(rows, by_code, named) -> list:
+    """The top `BONUS_RACE` by BPS, with the bonus each has been awarded so far.
+
+    ⭐⭐ **The one thing no livescore app carries.** BPS decides the 3/2/1, and ADR-356 measured the award
+    staying provisional for ninety-six minutes after the whistle — ⚠️ *which is exactly the window in which
+    knowing who is winning it matters, and exactly when it can still change.*
+    """
+    ranked = sorted(rows, key=lambda r: (r["bps"] or 0), reverse=True)[:BONUS_RACE]
+    out = []
+    for r in ranked:
+        player = by_code.get(r["element_code"])
+        if player is None:
+            continue
+        named.add(player["id"])
+        out.append({"player": player["id"], "bonus": r["bonus"] or 0, "bps": r["bps"] or 0})
+    return out
+
+
+def _lining_up(fixture, squad_ids, players) -> list:
+    """Which of the manager's players are in a fixture that has **not been played** (ADR-360).
+
+    ⭐ `yours` is built from `player_history`, which does not exist before a match — so a forward week
+    would show every card empty. ⚠️ Team membership answers it instead: this is *who is involved*, never
+    who will start, and it carries no points because there are none.
+    """
+    out = []
+    for pid in squad_ids:
+        row = players.get(pid)
+        if row is None:
+            continue
+        if row["team_id"] in (fixture["team_h"], fixture["team_a"]):
+            out.append({"player": player_summary(row, {}, {}, {}), "minutes": None, "goals": None,
+                        "assists": None, "points": None, "bonus": None})
     return out
 
 
@@ -235,7 +317,7 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
         if gameweek is None:
             # ⭐ A season that has not started is a fact, not a failure.
             return {"gameweek": None, "live": False, "yours_known": False,
-                "clubs": {}, "matches": []}
+                    "clubs": {}, "people": {}, "matches": []}
 
         stored = {f["id"]: f for f in all_fixtures if f["event"] == gameweek}
 
@@ -260,6 +342,19 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
                     }
 
         players = {p["id"]: p for p in store.get_players()}
+        by_code_player = {p["code"]: p for p in players.values()}
+
+        # ⭐⭐ **One local query for the whole week's events** (ADR-360). `player_history` already holds
+        # goals, assists, cards, saves, bonus and BPS keyed by fixture, so a card for GW1 costs nothing
+        # upstream and needs no column that is not already there.
+        per_fixture: dict[int, list] = {}
+        for row in store.history_for_fixtures(stored):
+            per_fixture.setdefault(row["fixture"], []).append(row)
+
+        # ⭐ Every player named anywhere in the answer, once — the sidecar `clubs` already uses (ADR-227).
+        # ⚠️ *A scorer, an assister and a bonus-race entry are often the same man*, and repeating his
+        # summary three times per match is the payload mistake that ADR made a rule about.
+        named: set[int] = set()
         # ⭐ "Played" means every match of the week is over — the point at which the caller's current
         # squad stops being the one that earned these points.
         played = bool(stored) and all(f["finished"] for f in stored.values())
@@ -299,11 +394,24 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
                 # (ADR-347), null otherwise. ⚠️ *Null is the normal case for a match that has just
                 # finished* — the clubs take hours — so a client must draw the card without it.
                 "highlights": f["highlights_url"],
-                "yours": _yours({f["id"]}, squad, by_code, players),
+                # ⭐ Everyone's events, so the card can say what happened rather than only what *you* got.
+                # ⚠️ An unplayed fixture has rows (ADR-125) but no football: the match gates them, not the
+                # rows, so a future week reports nothing rather than eleven nil returns.
+                "events": (_events(per_fixture.get(f["id"], ()), by_code_player, named)
+                           if _started(f) else {"goals": [], "assists": [], "cards": []}),
+                "bonus_race": (_bonus_race(per_fixture.get(f["id"], ()), by_code_player, named)
+                               if _started(f) else []),
+                # ⭐ Played: what your players did. Not yet played: which of them are involved (ADR-360).
+                "yours": (_yours({f["id"]}, squad, by_code, players) if _started(f)
+                          else _lining_up(f, ids, players)),
             })
         # ⭐ `yours_known` is about the gameweek, not one match: history lands for the whole week at once.
         return {"gameweek": gameweek, "live": in_flight, "yours_known": yours_known,
-                "clubs": club_rows, "matches": matches}
+                "clubs": club_rows,
+                # ⚠️ Keys are strings because JSON has no integer keys — the client looks up by `str(id)`.
+                "people": {str(i): player_summary(players[i], {}, {}, {})
+                           for i in sorted(named) if i in players},
+                "matches": matches}
     finally:
         if ours:
             store.close()

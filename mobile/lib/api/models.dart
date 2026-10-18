@@ -1490,6 +1490,8 @@ class MatchScore {
     required this.status,
     required this.highlights,
     required this.yours,
+    required this.events,
+    required this.bonusRace,
   });
 
   factory MatchScore.fromJson(Map<String, dynamic> json) => MatchScore(
@@ -1507,6 +1509,13 @@ class MatchScore {
     yours: [
       for (final y in (json['yours'] as List? ?? []))
         MatchAppearance.fromJson(y as Map<String, dynamic>),
+    ],
+    events: MatchEvents.fromJson(
+      json['events'] as Map<String, dynamic>? ?? const {},
+    ),
+    bonusRace: [
+      for (final b in (json['bonus_race'] as List? ?? []))
+        BonusEntry.fromJson(b as Map<String, dynamic>),
     ],
   );
 
@@ -1532,14 +1541,27 @@ class MatchScore {
   /// Your players who featured. ⚠️ Empty does **not** mean none — see [GameweekScores.yoursKnown].
   final List<MatchAppearance> yours;
 
+  /// Everyone's goals, assists and cards — not only yours (ADR-360). Empty for a match not yet played.
+  final MatchEvents events;
+
+  /// ⭐⭐ The top few by BPS, with the bonus each has so far — **the one thing no livescore app carries.**
+  /// ⚠️ Ordered by BPS rather than by the award, because while the award is provisional (ADR-356 measured
+  /// ninety-six minutes) the order is the story and the bonus column is still empty.
+  final List<BonusEntry> bonusRace;
+
   /// ⭐ `true` once there is a score to print. A match in flight has one; an unplayed one does not.
   bool get hasScore => homeScore != null && awayScore != null;
 }
 
-/// One of your players in one match — the player, and what he did (ADR-346).
+/// One of your players in one match — who, and what he did (ADR-346).
 ///
-/// ⭐ **The player is a [PlayerSummary] and the week sits beside him** (ADR-227). A flat dict of id and
-/// stats was the first shape and the wrong one, for the same reason it was wrong in `gameweek_result`.
+/// ⭐ **The player is a [PlayerSummary] and the week sits beside him** (ADR-227). ⚠️⚠️ He stays one here
+/// rather than becoming an id into [GameweekScores.people], which would describe each man once: build 45
+/// parses this field as an object, so changing it would have broken the shipped app the moment the server
+/// deployed (ADR-360). *An additive change reaches old clients harmlessly; a changed field does not.*
+///
+/// ⚠️ For a match not yet played the counters are **null**, not zero: ⭐ *a nil return and a match that
+/// has not kicked off must not read alike* (ADR-346's `0-0` rule, one level down).
 class MatchAppearance {
   MatchAppearance({
     required this.player,
@@ -1555,19 +1577,108 @@ class MatchAppearance {
         player: json['player'] == null
             ? null
             : PlayerSummary.fromJson(json['player'] as Map<String, dynamic>),
-        minutes: (json['minutes'] as num?)?.toInt() ?? 0,
-        goals: (json['goals'] as num?)?.toInt() ?? 0,
-        assists: (json['assists'] as num?)?.toInt() ?? 0,
-        points: (json['points'] as num?)?.toInt() ?? 0,
-        bonus: (json['bonus'] as num?)?.toInt() ?? 0,
+        minutes: (json['minutes'] as num?)?.toInt(),
+        goals: (json['goals'] as num?)?.toInt(),
+        assists: (json['assists'] as num?)?.toInt(),
+        points: (json['points'] as num?)?.toInt(),
+        bonus: (json['bonus'] as num?)?.toInt(),
       );
 
   final PlayerSummary? player;
-  final int minutes;
-  final int goals;
-  final int assists;
-  final int points;
+  final int? minutes;
+  final int? goals;
+  final int? assists;
+  final int? points;
+  final int? bonus;
+
+  /// ⭐ Did he actually play? ⚠️ *Null means the match has not happened*, which is not the same as nil.
+  bool get played => minutes != null;
+}
+
+/// What happened in a match: goals, assists and cards, for **both** sides (ADR-360).
+///
+/// ⚠️⚠️ **Goals and assists are siblings, never nested.** FPL publishes them as two lists and links them
+/// to nothing — Brentford's pairing was forced, one goal and one assist; Liverpool's was not, and which of
+/// Wirtz and Barcola set up which of Munoz and Isak is simply not in the data. ⭐⭐ *Pairing two sorted
+/// lists is the ADR-351 mistake*, and the first mockup of this card made it before a test did.
+///
+/// 📌 There are no minutes here and never will be: FPL publishes no timings, no substitutions and no VAR
+/// (ADR-358). This is a list of what happened, not a timeline.
+class MatchEvents {
+  const MatchEvents({
+    required this.goals,
+    required this.assists,
+    required this.cards,
+  });
+
+  factory MatchEvents.fromJson(Map<String, dynamic> json) => MatchEvents(
+    goals: [
+      for (final g in (json['goals'] as List? ?? []))
+        EventEntry.fromJson(g as Map<String, dynamic>),
+    ],
+    assists: [
+      for (final a in (json['assists'] as List? ?? []))
+        EventEntry.fromJson(a as Map<String, dynamic>),
+    ],
+    cards: [
+      for (final c in (json['cards'] as List? ?? []))
+        CardEntry.fromJson(c as Map<String, dynamic>),
+    ],
+  );
+
+  final List<EventEntry> goals;
+  final List<EventEntry> assists;
+  final List<CardEntry> cards;
+
+  bool get isEmpty => goals.isEmpty && assists.isEmpty && cards.isEmpty;
+}
+
+/// A player and how many of a thing he did — `count` because a hat-trick is one entry, not three.
+class EventEntry {
+  const EventEntry({required this.player, required this.count});
+
+  factory EventEntry.fromJson(Map<String, dynamic> json) => EventEntry(
+    player: (json['player'] as num?)?.toInt() ?? 0,
+    count: (json['count'] as num?)?.toInt() ?? 1,
+  );
+
+  final int player;
+  final int count;
+}
+
+/// A booking or a dismissal. ⭐ One card per player, and a second yellow is recorded as the **red** —
+/// ⚠️ *a sending off shown as a booking is the wrong fact.*
+class CardEntry {
+  const CardEntry({required this.player, required this.colour});
+
+  factory CardEntry.fromJson(Map<String, dynamic> json) => CardEntry(
+    player: (json['player'] as num?)?.toInt() ?? 0,
+    colour: json['colour'] as String? ?? 'yellow',
+  );
+
+  final int player;
+  final String colour;
+
+  bool get isRed => colour == 'red';
+}
+
+/// One line of the bonus race: where a player stands on BPS, and what he has been awarded so far.
+class BonusEntry {
+  const BonusEntry({
+    required this.player,
+    required this.bonus,
+    required this.bps,
+  });
+
+  factory BonusEntry.fromJson(Map<String, dynamic> json) => BonusEntry(
+    player: (json['player'] as num?)?.toInt() ?? 0,
+    bonus: (json['bonus'] as num?)?.toInt() ?? 0,
+    bps: (json['bps'] as num?)?.toInt() ?? 0,
+  );
+
+  final int player;
   final int bonus;
+  final int bps;
 }
 
 /// A gameweek's matches (ADR-346).
@@ -1577,6 +1688,7 @@ class GameweekScores {
     required this.live,
     required this.yoursKnown,
     required this.clubs,
+    required this.people,
     required this.matches,
   });
 
@@ -1587,6 +1699,12 @@ class GameweekScores {
     clubs: {
       for (final e in (json['clubs'] as Map? ?? {}).entries)
         e.key as String: Club.fromJson(e.value as Map<String, dynamic>),
+    },
+    people: {
+      for (final e in (json['people'] as Map? ?? {}).entries)
+        int.tryParse('${e.key}') ?? -1: PlayerSummary.fromJson(
+          e.value as Map<String, dynamic>,
+        ),
     },
     matches: [
       for (final m in (json['matches'] as List? ?? []))
@@ -1609,10 +1727,20 @@ class GameweekScores {
   /// shape, as `my-team` does with `kits`).
   final Map<String, Club> clubs;
 
+  /// ⭐ Every player named anywhere in the answer, **once** — the same sidecar shape as [clubs]
+  /// (ADR-227). ⚠️ Keyed by id because JSON has no integer keys; the server sends them as strings.
+  final Map<int, PlayerSummary> people;
+
   final List<MatchScore> matches;
 
   /// The club behind a short name, or a stand-in carrying the code itself — ⚠️ *never a guess at a name.*
   Club club(String short) => clubs[short] ?? Club(name: short, badge: '');
+
+  /// The player behind an id, or null. ⚠️ *A missing id draws nothing* — it never invents a name.
+  PlayerSummary? person(int? id) => id == null ? null : people[id];
+
+  /// ⭐ His name, or a dash. Used wherever a line would otherwise read as an empty slot.
+  String nameOf(int? id) => person(id)?.name ?? '—';
 }
 
 /// A club as the scores screen draws it (ADR-346).

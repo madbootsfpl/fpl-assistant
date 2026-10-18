@@ -1407,6 +1407,24 @@ class Storage:
             "AND (highlights_url IS NULL OR kickoff_time > ?) ORDER BY kickoff_time DESC",
             (played, recent)).fetchall()
 
+    def history_for_fixtures(self, fixture_ids) -> list:
+        """Every player's row for these fixtures — what each one did in each match (ADR-360).
+
+        ⭐⭐ **The match card needs no new data and no upstream call.** `player_history` already carries
+        goals, assists, cards, saves, bonus and BPS **keyed by fixture**, for every gameweek the backfill
+        has reached — so a card for GW1 is one local query, not a schema change and not a request to FPL.
+
+        ⚠️ **A row exists once its fixture is SCHEDULED, not once it is played** (ADR-125): FPL writes the
+        week's rows up front with `minutes = 0`. ⭐ *Counting from a row's presence would give an unplayed
+        match a full set of nil returns*, so the caller filters on the fixture, never on the row.
+        """
+        ids = [int(i) for i in fixture_ids]
+        if not ids:
+            return []
+        marks = ",".join("?" for _ in ids)
+        return self.conn.execute(
+            f"SELECT * FROM player_history WHERE fixture IN ({marks})", tuple(ids)).fetchall()
+
     def get_all_fixtures(self) -> list:
         """Every stored fixture, in kickoff order — **including ones already played** (ADR-211 2c).
 

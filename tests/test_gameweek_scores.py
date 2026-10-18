@@ -127,7 +127,7 @@ def test_with_nothing_played_the_answer_is_empty_rather_than_an_error(store):
     out = gameweek_scores(GameweekScoresRequest(), store=store,
                           now=datetime(2026, 8, 1, tzinfo=UTC))
     assert out == {"gameweek": None, "live": False, "yours_known": False,
-                   "clubs": {}, "matches": []}
+                   "clubs": {}, "people": {}, "matches": []}
 
 
 # ── the join, and what it must not claim ─────────────────────────────────────────────────────────
@@ -472,3 +472,138 @@ def test_a_stored_row_without_the_column_behaves_as_it_always_did(store):
     out = gameweek_scores(GameweekScoresRequest(gameweek=gw), store=store,
                           now=datetime(2026, 10, 17, 18, 0, tzinfo=UTC))
     assert out["matches"][0]["status"] == "Full time"
+
+
+# ── what happened in the match, not just what you got (ADR-360) ──────────────────────────────────
+
+def _a_played_fixture(store, gw=5):
+    """A real fixture from the snapshot with goals in it, and its history rows."""
+    row = store.conn.execute(
+        "SELECT fixture FROM player_history WHERE round = ? AND goals_scored > 0 LIMIT 1", (gw,)).fetchone()
+    return row["fixture"]
+
+
+def test_the_card_carries_everyones_events_not_only_yours(store):
+    """⭐⭐ **No new data and no upstream call.** `player_history` already holds goals, assists, cards,
+    bonus and BPS **keyed by fixture**, so a card for a gameweek months old is one local query."""
+    out = gameweek_scores(GameweekScoresRequest(gameweek=5, player_ids=[]), store=store)
+    scored = [m for m in out["matches"] if m["events"]["goals"]]
+    assert scored, "a played gameweek produced no goals at all"
+
+    m = scored[0]
+    # ⚠️ The squad is empty, so every name here belongs to somebody else — which is the point.
+    assert out["yours_known"] is False
+    assert all(str(g["player"]) in out["people"] for g in m["events"]["goals"])
+    # ⚠️ `<=`, not `==`: an own goal counts on the scoreline and not in anyone's `goals_scored`.
+    # ⭐ *The first draft of this line ended `or True`, which asserts nothing at all.*
+    assert sum(g["count"] for g in m["events"]["goals"]) <= m["home_score"] + m["away_score"]
+
+
+def test_goals_and_assists_stay_two_lists(store):
+    """⚠️⚠️ **FPL links them to nothing.** Liverpool scored twice and two different players assisted;
+    which set up which is not in the data. ⭐ *Pairing two sorted lists is the ADR-351 mistake*, so the
+    payload offers no pairing to render — the lists are siblings, never nested."""
+    out = gameweek_scores(GameweekScoresRequest(gameweek=5, player_ids=[]), store=store)
+    for m in out["matches"]:
+        for g in m["events"]["goals"]:
+            assert set(g) == {"player", "count"}, f"a goal carries an assist: {g}"
+
+
+def test_a_sending_off_is_red_not_yellow(store):
+    """⭐ A second yellow is recorded as **both** a yellow and a red. The card shows one card per player
+    and it is the red — ⚠️ *a dismissal shown as a booking is the wrong fact.*"""
+    fid = _a_played_fixture(store)
+    code = store.conn.execute(
+        "SELECT element_code FROM player_history WHERE fixture = ? LIMIT 1", (fid,)).fetchone()["element_code"]
+    with store.conn:
+        store.conn.execute(
+            "UPDATE player_history SET yellow_cards = 1, red_cards = 1 WHERE fixture = ? AND element_code = ?",
+            (fid, code))
+
+    out = gameweek_scores(GameweekScoresRequest(gameweek=5, player_ids=[]), store=store)
+    m = next(x for x in out["matches"] if x["fixture"] == fid)
+    pid = next(p["id"] for p in store.get_players() if p["code"] == code)
+    his = [c for c in m["events"]["cards"] if c["player"] == pid]
+    assert his == [{"player": pid, "colour": "red"}], his
+
+
+def test_the_bonus_race_is_ordered_by_bps_and_carries_the_award(store):
+    """⭐⭐ The one thing no livescore app has. ⚠️ Ordered by **BPS**, not by bonus: while the award is
+    provisional (ADR-356 measured 96 minutes) the bonus column is still empty and the order is the story."""
+    out = gameweek_scores(GameweekScoresRequest(gameweek=5, player_ids=[]), store=store)
+    m = next(x for x in out["matches"] if x["bonus_race"])
+    bps = [b["bps"] for b in m["bonus_race"]]
+    assert bps == sorted(bps, reverse=True), bps
+    assert len(m["bonus_race"]) <= mod.BONUS_RACE
+    assert all({"player", "bonus", "bps"} == set(b) for b in m["bonus_race"])
+
+
+def test_the_sidecar_names_only_the_players_it_references(store):
+    """🔴 **The first version named every player with a history row** — all 667 across a gameweek, a
+    sidecar of **126 KB** on a phone. ⭐ *That is the ADR-227 payload sin inside the change that cites it*,
+    and only counting the bytes found it."""
+    out = gameweek_scores(GameweekScoresRequest(gameweek=5, player_ids=[]), store=store)
+    referenced = {
+        e["player"]
+        for m in out["matches"]
+        for key in ("goals", "assists", "cards")
+        for e in m["events"][key]
+    } | {b["player"] for m in out["matches"] for b in m["bonus_race"]}
+
+    assert {int(i) for i in out["people"]} == referenced
+    assert len(out["people"]) < 200, f"{len(out['people'])} players named — the sidecar has run away"
+
+
+def test_a_future_week_shows_who_is_involved_not_an_empty_card(store):
+    """⭐⭐ **The owner's question: do future fixtures work?** They do — all 380 are scheduled with
+    kick-off times — but `yours` is built from `player_history`, which does not exist before a match, so
+    every forward card came back empty. ⚠️ Team membership answers *who is involved*; it never claims who
+    will start, and it carries no points because there are none to carry."""
+    from datetime import UTC, datetime, timedelta
+    gw = 6
+    later = datetime.now(UTC) + timedelta(days=7)
+    with store.conn:
+        store.conn.execute("DELETE FROM player_history WHERE round = ?", (gw,))
+        store.conn.execute(
+            "UPDATE fixtures SET started = 0, finished = 0, team_h_score = NULL, team_a_score = NULL, "
+            "kickoff_time = ? WHERE event = ?", (later.isoformat(), gw))
+
+    out = gameweek_scores(GameweekScoresRequest(gameweek=gw, player_ids=_squad(store)), store=store)
+    involved = [m for m in out["matches"] if m["yours"]]
+    assert involved, "a future week named none of the manager's players"
+
+    for m in out["matches"]:
+        assert m["events"] == {"goals": [], "assists": [], "cards": []}
+        assert m["bonus_race"] == []
+        assert m["status"] == "" and m["home_score"] is None
+        for y in m["yours"]:
+            # ⚠️ No points, no minutes: ⭐ *a nil return and a match not yet played must not look alike.*
+            assert y["points"] is None and y["minutes"] is None and y["goals"] is None
+            assert y["player"] is not None, "a slot with nobody in it"
+
+
+def test_a_player_is_only_involved_in_his_own_clubs_fixture(store):
+    """⚠️ The guard on the forward view: ⭐ *a fix that lists your whole squad under every match passes
+    the test above and is useless.*"""
+    from datetime import UTC, datetime, timedelta
+    gw = 6
+    later = datetime.now(UTC) + timedelta(days=7)
+    with store.conn:
+        store.conn.execute("DELETE FROM player_history WHERE round = ?", (gw,))
+        store.conn.execute(
+            "UPDATE fixtures SET started = 0, finished = 0, kickoff_time = ? WHERE event = ?",
+            (later.isoformat(), gw))
+
+    squad = _squad(store)
+    out = gameweek_scores(GameweekScoresRequest(gameweek=gw, player_ids=squad), store=store)
+    clubs = {t["short_name"]: t["id"] for t in store.get_teams()}
+    by_id = {p["id"]: p for p in store.get_players()}
+
+    for m in out["matches"]:
+        sides = {clubs[m["home"]], clubs[m["away"]]}
+        for y in m["yours"]:
+            pid = y["player"]["id"]
+            assert by_id[pid]["team_id"] in sides, f"{by_id[pid]['web_name']} is not in {m['home']}-{m['away']}"
+    # ⭐ And nobody is listed twice across the week: a player has one fixture in a normal gameweek.
+    listed = [y["player"]["id"] for m in out["matches"] for y in m["yours"]]
+    assert len(listed) == len(set(listed)), "a player was involved in two matches"

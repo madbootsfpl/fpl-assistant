@@ -171,7 +171,10 @@ class _MatchCard extends StatelessWidget {
       for (final a in mine)
         if (a.player?.team == match.away) a,
     ];
-    final points = mine.fold<int>(0, (sum, a) => sum + a.points);
+    // ⚠️ `?? 0`: the counters are nullable since ADR-360, because a fixture not yet played has no
+    // points rather than nought of them — ⭐ *and a null quietly read as zero is how a future match
+    // comes to claim a nil return.*
+    final points = mine.fold<int>(0, (sum, a) => sum + (a.points ?? 0));
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -250,7 +253,7 @@ class _Side extends StatelessWidget {
   /// `João Pedro ⚽⚽ · Raya` — goals as the one event compact enough to earn its place.
   String get _names => [
     for (final a in appearances)
-      '${a.player?.name ?? 'Your player'}${'⚽' * a.goals}',
+      '${a.player?.name ?? 'Your player'}${'⚽' * (a.goals ?? 0)}',
   ].join(' · ');
 
   @override

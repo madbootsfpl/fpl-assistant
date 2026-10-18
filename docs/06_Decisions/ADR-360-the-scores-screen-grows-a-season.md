@@ -1,7 +1,7 @@
 # ADR-360 — The Scores screen grows a season
 
 **Date:** 2026-10-18
-**Status:** 🚪 **Proposed — this is the gate.** Nothing is built until this is agreed.
+**Status:** ✅ **Agreed 2026-10-18 — building.** The server is done; the screen is not (see *State of the build*).
 **Supersedes the parking in:** ADR-358
 **Mockup:** `https://claude.ai/artifact/5WB1oNori2ZmGkBY2NQYx9` (real GW7 data throughout)
 
@@ -107,6 +107,40 @@ useful exactly then, and at its most likely to change under the reader. It needs
 - the Flashscore timeline — **not deferred, impossible**: no minutes, no subs, no VAR, no lineups (ADR-358)
 - buying a second data provider
 - `data_checked` and the settled-week caching question (ADR-356 left it alone on purpose)
+
+## 🔴 The hazard that changed the plan mid-build
+
+**`yours[].player` was briefly an id into `people`** — the sidecar describing each man once, which is what
+`clubs` beside it has always done. Eleven men travel twice in the payload without it.
+
+⚠️⚠️ **Build 45 parses that field as an object** (`json['player'] as Map<String, dynamic>`), and Render
+deploys on push. Shipping the server alone would have thrown on the Scores screen for all nine testers
+**the moment it deployed**, before any of them could update.
+
+⭐⭐ *An additive change reaches an old client harmlessly; a changed field does not.* So `events` and
+`bonus_race` reference `people` by id and `yours` keeps its shipped shape. The inconsistency is deliberate
+and costs about 2 KB — it can go the next time that field changes shape for another reason.
+
+## State of the build
+
+**Done, green, and safe to deploy on its own:**
+
+* `player_history` already held goals, assists, cards, saves, bonus and BPS **keyed by fixture** — so the
+  whole card is one local query. ⭐ *No schema change, no upstream call, and GW1 works.*
+* `events` (goals · assists · cards), `bonus_race`, and a `people` sidecar; a forward week reports **who
+  of yours is involved**, from team membership rather than from history that does not exist yet.
+* The drawn ball and boot moved out of `result_pitch.dart` into `event_icons.dart` so both screens use
+  one shape. ⚠️ The Scores line still builds `'⚽' * goals` into a **string** — that is the next edit, and
+  it is a `Row`, not a find-and-replace.
+* 30 server tests, five mutants each caught. Payload 12.7 → **30.6 KB** wire, between `my-team` and
+  `ticker`.
+
+**🔴 Caught by counting bytes:** the first sidecar named every player with a history row — all 667 across
+a gameweek, **126 KB** — because the id was added before checking whether he had done anything.
+⭐ *That is the ADR-227 payload sin inside the change that cites it.*
+
+**Not built yet:** the card itself (summary + one dropdown) and the week bar. The new fields are parsed
+by the client and not yet drawn, so the screen is exactly as it shipped.
 
 ## Definition of done
 
