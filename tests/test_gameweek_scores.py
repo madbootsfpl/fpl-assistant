@@ -920,3 +920,116 @@ def test_a_week_with_its_history_never_asks_for_live_points(store):
     gameweek_scores(GameweekScoresRequest(gameweek=5, player_ids=_squad(store)), store=store,
                     client=spy, now=datetime(2026, 10, 18, 19, 0, tzinfo=UTC))
     assert spy.asked == 0
+
+
+# ── the bench (ADR-365) ──────────────────────────────────────────────────────────────────────────
+
+class _PicksWithBench:
+    """FPL's picks for one week. ⭐ `multiplier` is the fact; `position` only agrees with it."""
+
+    def __init__(self, xi, bench, subbed_on=()):
+        self.xi, self.bench, self.subbed_on = list(xi), list(bench), list(subbed_on)
+        self.asked = 0
+
+    def get_entry_picks(self, entry, gameweek):
+        self.asked += 1
+        rows = [{"element": e, "position": i + 1, "multiplier": 1} for i, e in enumerate(self.xi)]
+        rows += [{"element": e, "position": 12 + i, "multiplier": 0} for i, e in enumerate(self.bench)]
+        # ⭐ An automatic substitution: FPL swaps the positions, so the man brought on reads as an XI row.
+        for e in self.subbed_on:
+            for r in rows:
+                if r["element"] == e:
+                    r["position"], r["multiplier"] = 5, 1
+        return {"picks": rows}
+
+    def get_fixtures(self):
+        return []
+
+    def get_event_live(self, gameweek):
+        return {"elements": []}
+
+
+def _week_with_picks(store, gw, picks, *, now=None):
+    from datetime import UTC, datetime
+    mod.forget_live()
+    mod.forget_live_elements()
+    at = now or datetime(2026, 10, 20, 9, 0, tzinfo=UTC)
+    with store.conn:
+        store.conn.execute("UPDATE fixtures SET started = 1, finished = 1 WHERE event = ?", (gw,))
+    return gameweek_scores(
+        GameweekScoresRequest(gameweek=gw, player_ids=[], manager_id=99),
+        store=store, client=picks, now=at)
+
+
+def test_a_benched_player_is_flagged_as_benched(store):
+    """⭐⭐ **His points are on the card and they did not count.** The owner, on build 49: *"Your Players
+    shows points for both playing and benched players, could benched players be flagged?"*"""
+    all_ids = [p["id"] for p in store.get_players()][:15]
+    picks = _PicksWithBench(xi=all_ids[:11], bench=all_ids[11:])
+    out = _week_with_picks(store, 5, picks)
+
+    entries = {y["player"]["id"]: y for m in out["matches"] for y in m["yours"]}
+    assert entries, "nobody was named at all"
+    for pid in all_ids[11:]:
+        if pid in entries:
+            assert entries[pid]["benched"] is True, f"{pid} was on the bench and is not flagged"
+    for pid in all_ids[:11]:
+        if pid in entries:
+            assert entries[pid]["benched"] is False
+
+
+def test_an_automatic_substitution_is_not_benched(store):
+    """⚠️⚠️ **The reason `multiplier` is read and `position` is not.** A man brought on by an automatic
+    substitution earned his points — ⭐ *flagging him as benched would be the opposite of the truth*, and
+    reading `position > 11` would do exactly that for the player FPL moved into the XI."""
+    all_ids = [p["id"] for p in store.get_players()][:15]
+    came_on = all_ids[11]
+    picks = _PicksWithBench(xi=all_ids[:11], bench=all_ids[11:], subbed_on=[came_on])
+    out = _week_with_picks(store, 5, picks)
+
+    entries = {y["player"]["id"]: y for m in out["matches"] for y in m["yours"]}
+    if came_on in entries:
+        assert entries[came_on]["benched"] is False
+
+
+def test_with_no_picks_to_read_the_bench_is_unknown_not_empty(store):
+    """⚠️ `None`, never `False`. ⭐ *An empty set would quietly tell every card that nobody was benched,
+    which is a claim rather than an absence.*"""
+    from datetime import UTC, datetime, timedelta
+    gw, now = 6, datetime(2026, 10, 20, 9, 0, tzinfo=UTC)
+    mod.forget_live()
+    mod.forget_live_elements()
+    with store.conn:
+        store.conn.execute(
+            "UPDATE fixtures SET started = 0, finished = 0, kickoff_time = ? WHERE event = ?",
+            ((now + timedelta(days=2)).isoformat(), gw))
+    out = gameweek_scores(GameweekScoresRequest(gameweek=gw, player_ids=_squad(store)),
+                          store=store, now=now)
+    named = [y for m in out["matches"] for y in m["yours"]]
+    assert named, "a future week named nobody"
+    assert all(y["benched"] is None for y in named)
+
+
+def test_bench_boost_benches_nobody(store):
+    """⭐⭐ **The case that makes `multiplier` the right field, and `position` the wrong one.** 🔴 A
+    mutation reading `position > 11` survived every other test here: on an automatic substitution FPL
+    **swaps the positions**, so the two fields agree and neither can be told from the other.
+
+    ⚠️⚠️ Under **Bench Boost** all fifteen play — the bench keeps positions 12-15 and gains
+    `multiplier 1` — so reading the position would bench four men whose points counted.
+    """
+    all_ids = [p["id"] for p in store.get_players()][:15]
+
+    class _Boosted(_PicksWithBench):
+        def get_entry_picks(self, entry, gameweek):
+            picks = super().get_entry_picks(entry, gameweek)
+            for row in picks["picks"]:
+                row["multiplier"] = 1      # ⭐ the chip: everyone counts, positions unchanged
+            return picks
+
+    out = _week_with_picks(store, 5, _Boosted(xi=all_ids[:11], bench=all_ids[11:]))
+    entries = {y["player"]["id"]: y for m in out["matches"] for y in m["yours"]}
+    assert entries, "nobody was named"
+    assert all(y["benched"] is False for y in entries.values()), (
+        "Bench Boost was played and somebody was still flagged as benched"
+    )

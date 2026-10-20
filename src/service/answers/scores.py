@@ -157,7 +157,7 @@ def _which_gameweek(fixtures: list, now=None) -> int | None:
     return max(played) if played else None
 
 
-def _yours(rows, squad, by_code, players) -> list:
+def _yours(rows, squad, by_code, players, benched) -> list:
     """The manager's players who featured in one fixture, with what they did.
 
     ⚠️ **Points come from `player_history`, never computed here.** FPL settles bonus after full time, and
@@ -188,6 +188,10 @@ def _yours(rows, squad, by_code, players) -> list:
                     "assists": r["assists"],
                     "points": r["total_points"],
                     "bonus": r["bonus"],
+                    # ⭐⭐ **Did his points count?** (ADR-365) A benched man's do not, unless an automatic
+                    # substitution brought him on — which `multiplier` already accounts for.
+                    # ⚠️ `None` where no manager id could be asked: *unknown and benched are not the same.*
+                    "benched": (player_id in benched) if benched is not None else None,
                 })
     return out
 
@@ -280,7 +284,7 @@ def forget_live_elements() -> None:
     _live_elements_cache.clear()
 
 
-def _yours_live(fixture_id, squad_ids, elements, players, named) -> list:
+def _yours_live(fixture_id, squad_ids, elements, players, named, benched) -> list:
     """The manager's players in one fixture, from FPL's live attribution (ADR-364).
 
     🔴 **The agreed card had a YOUR PLAYERS block and the week being played had none.** `yours` is built
@@ -312,6 +316,7 @@ def _yours_live(fixture_id, squad_ids, elements, players, named) -> list:
                 "assists": (stats.get("assists") or {}).get("value", 0),
                 "points": sum(row.get("points") or 0 for row in (block.get("stats") or ())),
                 "bonus": (stats.get("bonus") or {}).get("value", 0),
+                "benched": (pid in benched) if benched is not None else None,
             })
     return out
 
@@ -420,7 +425,7 @@ def _bonus_race(rows, by_code, named) -> list:
     return out
 
 
-def _lining_up(fixture, squad_ids, players) -> list:
+def _lining_up(fixture, squad_ids, players, benched) -> list:
     """Which of the manager's players are in a fixture that has **not been played** (ADR-360).
 
     ⭐ `yours` is built from `player_history`, which does not exist before a match — so a forward week
@@ -434,7 +439,8 @@ def _lining_up(fixture, squad_ids, players) -> list:
             continue
         if row["team_id"] in (fixture["team_h"], fixture["team_a"]):
             out.append({"player": player_summary(row, {}, {}, {}), "minutes": None, "goals": None,
-                        "assists": None, "points": None, "bonus": None})
+                        "assists": None, "points": None, "bonus": None,
+                        "benched": (pid in benched) if benched is not None else None})
     return out
 
 
@@ -450,13 +456,13 @@ def _match_events(f, per_fixture, live_rows, by_code, players, named) -> dict:
             else {"goals": [], "assists": [], "cards": []})
 
 
-def _match_yours(f, per_fixture, squad, by_code, elements, ids, players, named) -> list:
+def _match_yours(f, per_fixture, squad, by_code, elements, ids, players, named, benched) -> list:
     """Your players in one match, from whichever source can honestly describe them."""
     if not _started(f):
-        return _lining_up(f, ids, players)
+        return _lining_up(f, ids, players, benched)
     if per_fixture.get(f["id"]):
-        return _yours({f["id"]}, squad, by_code, players)
-    return _yours_live(f["id"], ids, elements, players, named)
+        return _yours({f["id"]}, squad, by_code, players, benched)
+    return _yours_live(f["id"], ids, elements, players, named, benched)
 
 
 def _match_bonus(f, per_fixture, live_rows, by_code, players, named) -> list:
@@ -470,7 +476,7 @@ def _match_bonus(f, per_fixture, live_rows, by_code, players, named) -> list:
     return _bonus_race_from_stats(raw.get("stats"), players, named) if raw else []
 
 
-def _squad_that_week(request, gameweek: int, played: bool, players, *, client=None):
+def _squad_that_week(request, gameweek: int, played: bool, players, *, client=None) -> tuple:
     """The ids that were actually in this manager's team **that** gameweek.
 
     🔴🔴 **The squad a caller holds today is not the squad that played last week**, and joining one to the
@@ -487,16 +493,32 @@ def _squad_that_week(request, gameweek: int, played: bool, players, *, client=No
     For a week still in play the caller's own squad is right: FPL locks picks at the deadline and
     `my-team` returns that locked side.
     """
-    if not played:
-        return [i for i in request.player_ids if i in players]
-    if not request.manager_id:
-        return []
-    try:
-        from src.api.client import FplApiError, FplClient
-        picks = (client or FplClient()).get_entry_picks(request.manager_id, gameweek)
-    except (FplApiError, Exception):   # noqa: B014 - every failure degrades the same way
-        return []
-    return [p["element"] for p in (picks.get("picks") or []) if p.get("element") in players]
+    if request.manager_id:
+        # ⭐⭐ **Picks are public once the deadline passes**, not only once the week is over — so a week in
+        # play has them too, and with them the one thing the caller's flat list cannot carry: who was on
+        # the **bench** (ADR-365).
+        try:
+            from src.api.client import FplApiError, FplClient
+            picks = (client or FplClient()).get_entry_picks(request.manager_id, gameweek)
+        except (FplApiError, Exception):   # noqa: B014 - every failure degrades the same way
+            picks = None
+        if picks:
+            rows = [p for p in (picks.get("picks") or []) if p.get("element") in players]
+            # ⭐⭐ **`multiplier`, never `position`** — and the reason is **Bench Boost**, not automatic
+            # substitutions. 🔴 *The first version of this comment said otherwise and a mutation proved it
+            # wrong*: on an autosub FPL **swaps the positions**, so the man brought on reads
+            # `position 5, multiplier 1` and the two fields agree. They diverge under the chip, where all
+            # fifteen play and the bench keeps `position 12-15` with `multiplier 1`.
+            # ⚠️⚠️ *Reading the position there would bench four players whose points counted.*
+            return ([p["element"] for p in rows],
+                    {p["element"] for p in rows if not p.get("multiplier")})
+    if played:
+        # ⚠️⚠️ **A played week never falls back** (ADR-350). ⭐ *A wrong attribution is worse than none*,
+        # and the current squad is a different fifteen.
+        return [], None
+    # ⚠️ `None`, not an empty set: with no picks to read, who was benched is **unknown** — ⭐ *and an
+    # empty set would quietly tell every card that nobody was, which is a claim and not an absence.*
+    return [i for i in request.player_ids if i in players], None
 
 
 def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = None,
@@ -581,7 +603,7 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
         # ⭐ "Played" means every match of the week is over — the point at which the caller's current
         # squad stops being the one that earned these points.
         played = bool(stored) and all(f["finished"] for f in stored.values())
-        ids = _squad_that_week(request, gameweek, played, players, client=client)
+        ids, benched = _squad_that_week(request, gameweek, played, players, client=client)
         squad = {(players[i]["code"], i) for i in ids}
         by_code = store.get_gw_history_by_code() if squad else {}
 
@@ -633,7 +655,8 @@ def gameweek_scores(request: GameweekScoresRequest, *, store: Storage | None = N
                 # ⭐ Played: what your players did. Not yet played: which of them are involved (ADR-360).
                 # ⭐ Stored history, then FPL's live attribution, then who is merely involved — each a
                 # weaker claim than the one before, and ⚠️ *never a points total this app worked out.*
-                "yours": _match_yours(f, per_fixture, squad, by_code, elements, ids, players, named),
+                "yours": _match_yours(f, per_fixture, squad, by_code, elements, ids, players, named,
+                                      benched),
             })
         # ⭐ `yours_known` is about the gameweek, not one match: history lands for the whole week at once.
         return {"gameweek": gameweek, "live": in_flight, "yours_known": yours_known,

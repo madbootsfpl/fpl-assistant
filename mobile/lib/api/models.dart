@@ -1587,6 +1587,7 @@ class MatchAppearance {
     required this.assists,
     required this.points,
     required this.bonus,
+    required this.benched,
   });
 
   factory MatchAppearance.fromJson(Map<String, dynamic> json) =>
@@ -1599,6 +1600,7 @@ class MatchAppearance {
         assists: (json['assists'] as num?)?.toInt(),
         points: (json['points'] as num?)?.toInt(),
         bonus: (json['bonus'] as num?)?.toInt(),
+        benched: json['benched'] as bool?,
       );
 
   final PlayerSummary? player;
@@ -1607,6 +1609,13 @@ class MatchAppearance {
   final int? assists;
   final int? points;
   final int? bonus;
+
+  /// ⭐⭐ **Did his points count?** (ADR-365) A benched man's do not — unless an automatic substitution
+  /// brought him on, which FPL's `multiplier` already accounts for.
+  ///
+  /// ⚠️ `null` is **unknown**, never "no": with no manager id there are no picks to read, and *an absence
+  /// is not a claim.*
+  final bool? benched;
 
   /// ⭐ Did he actually play? ⚠️ *Null means the match has not happened*, which is not the same as nil.
   bool get played => minutes != null;

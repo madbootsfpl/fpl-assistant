@@ -618,7 +618,11 @@ class _Dropdown extends StatelessWidget {
       for (final y in match.yours)
         if (y.played) y,
     ];
-    final total = played.fold<int>(0, (sum, y) => sum + (y.points ?? 0));
+    // ⚠️⚠️ **Benched points are not in the total.** ⭐ *A sum that includes them disagrees with the one
+    // FPL shows*, which is the mistake ADR-346 exists to avoid in the other direction.
+    final total = played
+        .where((y) => y.benched != true)
+        .fold<int>(0, (sum, y) => sum + (y.points ?? 0));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -766,10 +770,17 @@ class _Label extends StatelessWidget {
 /// ⭐ Shape **and** colour: red against yellow is the one pair most likely to fail the readers who most
 /// need to tell them apart, so the red chip carries a darker ground as well as a redder mark.
 class _CardChip extends StatelessWidget {
-  const _CardChip({required this.name, required this.red});
+  const _CardChip({
+    required this.name,
+    required this.red,
+    this.markFirst = true,
+  });
 
   final String name;
   final bool red;
+
+  /// ⭐ Which side of the name the card sits on, so each column reads outward from the centre.
+  final bool markFirst;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -783,20 +794,22 @@ class _CardChip extends StatelessWidget {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 7,
-          height: 10,
-          decoration: BoxDecoration(
-            color: red ? const Color(0xFFE04141) : Brand.yellow,
-            borderRadius: BorderRadius.circular(1),
-          ),
-        ),
-        const SizedBox(width: 5),
+        if (markFirst) ...[_mark, const SizedBox(width: 5)],
         Text(
           name,
           style: const TextStyle(color: Colors.white70, fontSize: 11.5),
         ),
+        if (!markFirst) ...[const SizedBox(width: 5), _mark],
       ],
+    ),
+  );
+
+  Widget get _mark => Container(
+    width: 7,
+    height: 10,
+    decoration: BoxDecoration(
+      color: red ? const Color(0xFFE04141) : Brand.yellow,
+      borderRadius: BorderRadius.circular(1),
     ),
   );
 }
@@ -829,10 +842,36 @@ class _Cards extends StatelessWidget {
       runSpacing: 6,
       children: [
         for (final c in theirs)
-          _CardChip(name: week.nameOf(c.player), red: c.isRed),
+          // ⭐ The home side reads **name then card**, mirroring the scorers and assists above — the
+          // owner: *"this would align with scorers and assists and make reading a little easier."*
+          _CardChip(name: week.nameOf(c.player), red: c.isRed, markFirst: !end),
       ],
     );
   }
+}
+
+/// ⭐ Small, grey, beside the number it qualifies — ⚠️ *a bench label that shouts competes with the
+/// points it is explaining.*
+class _BenchTag extends StatelessWidget {
+  const _BenchTag();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(3),
+    ),
+    child: const Text(
+      'BENCH',
+      style: TextStyle(
+        color: Colors.white38,
+        fontSize: 8.5,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 0.06,
+      ),
+    ),
+  );
 }
 
 class _YourLine extends StatelessWidget {
@@ -875,13 +914,22 @@ class _YourLine extends StatelessWidget {
             ),
           ),
         ),
+        // ⭐⭐ **A benched man's points did not count**, so the card must not print them as though they
+        // did (ADR-365). ⚠️ The number stays — *it is still what he scored* — but greyed and labelled,
+        // because removing it answers a different question than the one being asked.
+        if (entry.benched == true) ...[
+          const _BenchTag(),
+          const SizedBox(width: 6),
+        ],
         Text(
           '${entry.points ?? 0}',
-          style: const TextStyle(
-            color: Color(0xFF6FD79A),
+          style: TextStyle(
+            color: entry.benched == true
+                ? Colors.white38
+                : const Color(0xFF6FD79A),
             fontSize: 13,
             fontWeight: FontWeight.w800,
-            fontFeatures: [FontFeature.tabularFigures()],
+            fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
       ],

@@ -274,6 +274,9 @@ void main() {
       final yours = (m['yours'] as List).cast<Map<String, dynamic>>();
       for (var i = 0; i < yours.length; i++) {
         yours[i]['points'] = i == 0 ? 1 : 0;
+        // ⚠️ Not benched: since ADR-365 a benched man's points are **excluded from the total**, so a
+        // squad that happens to be on the bench totals nought and this test is about "1 pt".
+        yours[i]['benched'] = false;
       }
     }
     await pumpScores(tester, body: body, key: 'onept');
@@ -593,5 +596,133 @@ void main() {
       // ⭐ and the race itself is still there
       expect(find.text('BONUS RACE'), findsOneWidget);
     });
+  });
+
+  group('the bench and the cards (ADR-365)', () {
+    Future<void> openFirst(
+      WidgetTester tester,
+      Map<String, dynamic> body,
+      String key,
+    ) async {
+      await pumpScores(tester, body: body, key: key);
+      await tester.tap(find.byIcon(Icons.expand_more).first);
+      await tester.pumpAndSettle();
+    }
+
+    Map<String, dynamic> withBench(bool? benched) {
+      final body = sampleJson();
+      for (final m in (body['matches'] as List).cast<Map<String, dynamic>>()) {
+        for (final y in (m['yours'] as List).cast<Map<String, dynamic>>()) {
+          y['benched'] = benched;
+          y['points'] = 7;
+        }
+      }
+      return body;
+    }
+
+    testWidgets(
+      'a benched player is labelled, and his points are not in the total',
+      (tester) async {
+        // ⭐⭐ The owner, on build 49: *"Your Players shows points for both playing and benched players,
+        // could benched players be flagged?"* ⚠️ The number stays — it is still what he scored — but a
+        // total that counts it disagrees with the one FPL shows.
+        await openFirst(tester, withBench(true), 'benched');
+
+        expect(find.text('BENCH'), findsWidgets);
+        expect(
+          find.text('0 pts'),
+          findsOneWidget,
+          reason: 'benched points were counted in the total',
+        );
+      },
+    );
+
+    testWidgets('a player who started is not labelled, and does count', (
+      tester,
+    ) async {
+      await openFirst(tester, withBench(false), 'started');
+
+      expect(find.text('BENCH'), findsNothing);
+      expect(find.text('0 pts'), findsNothing);
+    });
+
+    testWidgets('an unknown bench says nothing at all', (tester) async {
+      // ⚠️ `null` is **unknown**, never "no" — ⭐ *an absence is not a claim*, so nothing is drawn.
+      await openFirst(tester, withBench(null), 'unknownbench');
+
+      expect(find.text('BENCH'), findsNothing);
+    });
+
+    testWidgets(
+      'the home side reads name-then-card, the away side card-then-name',
+      (tester) async {
+        // ⭐ Mirrored outward from the centre, matching the scorers and assists above.
+        //
+        // ⚠️⚠️ **Built, not borrowed.** The sample's first match has both its cards on the **home**
+        // side, so it cannot show a mirror at all — ⭐ *a test that cannot fail for the reason it names
+        // is not testing that reason.* One card each side, constructed here.
+        final body = sampleJson();
+        final m = (body['matches'] as List).first as Map<String, dynamic>;
+        final people = body['people'] as Map<String, dynamic>;
+        String? idOn(String club) {
+          for (final e in people.entries) {
+            if ((e.value as Map)['team'] == club) return e.key;
+          }
+          return null;
+        }
+
+        // ⚠️ The away club may have nobody in `people` at all — the sidecar names only players the
+        // events reference, and this match's were all home. ⭐ *So the away man is constructed rather
+        // than hoped for*, which is the point of building the scenario.
+        final homeId = idOn(m['home'] as String);
+        expect(homeId, isNotNull, reason: 'no home player to card');
+        const awayId = '999001';
+        people[awayId] = <String, dynamic>{
+          'id': 999001,
+          'web_name': 'Visitor',
+          'team': m['away'],
+          'position': 'DEF',
+          'price': 4.5,
+          'xp': 2.0,
+          'status': 'a',
+          'chance': null,
+          'minutes_weight': 1.0,
+          'leaving': null,
+          'by_gameweek': <String, dynamic>{},
+        };
+        (m['events'] as Map)['cards'] = [
+          {'player': int.parse(homeId!), 'colour': 'yellow'},
+          {'player': int.parse(awayId), 'colour': 'red'},
+        ];
+
+        await pumpScores(tester, body: body, key: 'mirror');
+        await tester.tap(find.byIcon(Icons.expand_more).first);
+        await tester.pumpAndSettle();
+
+        final rows = tester.widgetList<Row>(find.byType(Row)).where((r) {
+          final kids = r.children;
+          return kids.length == 3 &&
+              r.mainAxisSize == MainAxisSize.min &&
+              kids.any((w) => w is Text) &&
+              kids.any((w) => w is Container);
+        }).toList();
+        expect(
+          rows.length,
+          2,
+          reason: 'expected one chip per side, got ${rows.length}',
+        );
+
+        expect(
+          rows.where((r) => r.children.first is Container).length,
+          1,
+          reason: 'the away card should sit before its name',
+        );
+        expect(
+          rows.where((r) => r.children.last is Container).length,
+          1,
+          reason: 'the home card should sit after its name',
+        );
+      },
+    );
   });
 }

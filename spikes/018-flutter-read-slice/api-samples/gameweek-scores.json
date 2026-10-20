@@ -163,6 +163,7 @@
       "yours": [
         {
           "assists": 2,
+          "benched": true,
           "bonus": 0,
           "goals": 0,
           "minutes": 90,
@@ -183,6 +184,7 @@
         },
         {
           "assists": 0,
+          "benched": true,
           "bonus": 0,
           "goals": 0,
           "minutes": 0,
@@ -400,6 +402,7 @@
       "yours": [
         {
           "assists": 0,
+          "benched": true,
           "bonus": 1,
           "goals": 0,
           "minutes": 90,
@@ -420,6 +423,7 @@
         },
         {
           "assists": 1,
+          "benched": true,
           "bonus": 3,
           "goals": 1,
           "minutes": 90,
@@ -440,6 +444,7 @@
         },
         {
           "assists": 0,
+          "benched": true,
           "bonus": 0,
           "goals": 0,
           "minutes": 90,
@@ -460,6 +465,7 @@
         },
         {
           "assists": 0,
+          "benched": true,
           "bonus": 0,
           "goals": 0,
           "minutes": 90,
@@ -480,6 +486,7 @@
         },
         {
           "assists": 0,
+          "benched": true,
           "bonus": 0,
           "goals": 0,
           "minutes": 80,
@@ -575,6 +582,7 @@
       "yours": [
         {
           "assists": 1,
+          "benched": true,
           "bonus": 3,
           "goals": 0,
           "minutes": 90,
@@ -690,6 +698,7 @@
       "yours": [
         {
           "assists": 0,
+          "benched": true,
           "bonus": 0,
           "goals": 0,
           "minutes": 90,
@@ -845,6 +854,7 @@
       "yours": [
         {
           "assists": 0,
+          "benched": true,
           "bonus": 0,
           "goals": 0,
           "minutes": 66,
@@ -968,6 +978,7 @@
       "yours": [
         {
           "assists": 1,
+          "benched": true,
           "bonus": 0,
           "goals": 0,
           "minutes": 90,
@@ -988,6 +999,7 @@
         },
         {
           "assists": 0,
+          "benched": true,
           "bonus": 0,
           "goals": 1,
           "minutes": 90,
@@ -1008,6 +1020,7 @@
         },
         {
           "assists": 0,
+          "benched": true,
           "bonus": 1,
           "goals": 1,
           "minutes": 84,
@@ -1099,6 +1112,7 @@
       "yours": [
         {
           "assists": 0,
+          "benched": true,
           "bonus": 0,
           "goals": 0,
           "minutes": 90,
@@ -1119,6 +1133,7 @@
         },
         {
           "assists": 0,
+          "benched": true,
           "bonus": 3,
           "goals": 1,
           "minutes": 80,
