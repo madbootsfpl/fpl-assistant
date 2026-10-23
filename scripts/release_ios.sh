@@ -71,8 +71,26 @@ echo "  built $(grep -o 'Runner.app ([0-9.]*MB)' /tmp/release_ios.log | tail -1)
 # ── 3. install ────────────────────────────────────────────────────────────────────────────────────
 # ⭐ `install`, not `run`: `run` stays attached and quitting it **terminates the app on the phone**. This
 # leaves the app installed and the terminal free.
-(cd mobile && flutter install -d "$device" >>/tmp/release_ios.log 2>&1) \
-  || { echo "  ✗ install failed:"; tail -20 /tmp/release_ios.log; exit 1; }
+#
+# 🔴🔴 **And a fallback, because `flutter install` loses the phone while the phone is right there**
+# (ADR-366). On 2026-10-23 it failed twice with *"No target device found… enable Developer Mode"* — on a
+# device `flutter devices` had just listed and `devicectl` reported `available (paired)`, with Developer
+# Mode already on. ⚠️⚠️ *That message is flutter's guess when its own lookup fails, not something the
+# phone said*, and it sent the owner to check a setting that was not the problem.
+#
+# ⭐⭐ Apple's own tool installed to the same UDID without complaint, and this script **already trusts it**
+# — step 4 asks `devicectl` whether the app is really there. So it does the installing too when flutter
+# cannot. ⚠️ Announced, never silent: *a fallback nobody is told about turns a broken tool into a mystery
+# that gets rediscovered.*
+if ! (cd mobile && flutter install -d "$device" >>/tmp/release_ios.log 2>&1); then
+  echo "  ⓘ  flutter could not reach the device — using Apple's installer instead"
+  if ! xcrun devicectl device install app --device "$device" \
+        mobile/build/ios/iphoneos/Runner.app >>/tmp/release_ios.log 2>&1; then
+    echo "  ✗ install failed, both ways:"
+    tail -20 /tmp/release_ios.log
+    exit 1
+  fi
+fi
 
 # ── 4. prove it ───────────────────────────────────────────────────────────────────────────────────
 # ⭐⭐ **Asks the phone, not the log.** A build that succeeded and an app that is on the device are
