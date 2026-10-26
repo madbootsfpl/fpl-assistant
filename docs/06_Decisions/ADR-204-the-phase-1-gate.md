@@ -2,7 +2,7 @@
 
 **Decision ID:** ADR-204
 **Date:** 2026-09-17
-**Status:** ⏳ **HELD — measured, not shipped. The candidate improves every criterion and fails the
+**Status:** ❌ **DECLINED at the GW8 review — see [ADR-367](./ADR-367-the-gw8-review-phase-1-declined.md).** ρ reached +0.9 SE against the +1 SE bar; hit@20's +2.1 SE result was four rounds of noise and came back +0.6 SE on eight. Originally: ⏳ **HELD — measured, not shipped. The candidate improves every criterion and fails the
 pre-registered one.** Re-decided at the GW8 review with a rule written *below*, before the data exists.
 **1832 tests (unchanged), ruff clean. No production code changed.**
 **Superseded By / Replaces:** Runs the gate [ADR-202](./ADR-202-the-minutes-baseline.md) set. Re-aims

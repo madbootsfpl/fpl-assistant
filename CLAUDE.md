@@ -100,9 +100,13 @@ that orients you is the one worst placed to be out of date* (ADR-294).
 **Open, and both need a decision rather than effort:** iOS TestFlight (£79/yr) and the **unauthenticated
 public API**, which ties to accounts (ADR-259).
 
-📅 **Held on a date: the learned xMins model** — the Phase 1 gate (ADR-204) is re-decided once **GW8 is
-played, on or after 2026-10-26**, against a rule written before the data existed. ⚠️ Do not re-argue the
-threshold; that is the point of it.
+✅ **Settled 2026-10-26: the learned xMins model is DECLINED for the season** (ADR-367). The Phase 1 gate
+was re-decided at GW8 against the rule ADR-204 pre-registered a month earlier: ρ reached **+0.9 SE against
+a +1 SE bar**, and hit@20 — which had looked like **+2.1 SE** on four rounds — came back **+0.6 SE** on
+eight, with three rounds worse. ⭐⭐ *The flattering secondary was four rounds of noise*, which is why it was
+recorded and not acted on. ⚠️ The threshold was not re-argued, and `k = 1` sitting at the grid edge was
+**not** chased with a finer search: widening after the bar is missed is choosing the answer after seeing
+the curve.
 
 For the live status and forward plan, see:
 - docs/00_Project/PROJECT_STATUS.md (the single live status)

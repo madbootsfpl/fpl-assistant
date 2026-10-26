@@ -16,7 +16,7 @@ A mature FPL assistant: an analytics + optimisation core, a decision-support sui
 natural-language layer (`ask` + `chat`), a deployed Streamlit web app, a crowd/signals lens, and the two
 differentiators — **Player DNA** (ADR-118) and **Team DNA** (ADR-119).
 
-**3,193 Python tests · 573 Dart tests · 366 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
+**3,193 Python tests · 573 Dart tests · 367 ADRs · CI green · live at madboots.streamlit.app / madboots.com.**
 ⚠️ *Counted 2026-09-28. The Dart half is listed separately because until ADR-322 it was not in CI at all — ⭐ a total that silently included 481 tests nothing ran was the more flattering number.*
 
 ⭐ **The shape of the work changed in September, and the roadmap below predates it.** Read the rest of this
@@ -334,8 +334,9 @@ audited 2026-08-27 against `docs/08_Marketing/Homepage_Copy.md`.
 views (ADR-159) · a per-season price sparkline (ADR-160) · the price-change predictor (ADR-092).
 
 **The ML track, through its gate.** Phase 0a retention (ADR-201) · Phase 0b the baseline (ADR-202) ·
-**availability recorded as it passes** (ADR-202/203) · 📌 **Phase 1's gate was run and the answer was "not
-yet"** (ADR-173/204/205) — re-decided after GW8, on or after 2026-10-26.
+**availability recorded as it passes** (ADR-202/203) · ✅ **Phase 1's gate was run twice and the answer is
+DECLINED for the season** (ADR-173/204/205/367) — re-decided at GW8 on 2026-10-26 against the
+pre-registered rule.
 
 **Mobile, and the platform under it.** Self-hosted Android distribution (ADR-282) · swipe through the season
 (ADR-298) · the tablet's portrait pitch (ADR-285) · mini-league sub-tabs (ADR-287) · the Lab's other two modes,
@@ -503,7 +504,17 @@ before starting**: the model was not the first problem. Four phases, each with i
 so anything learned must ship as **numbers computed offline and stored**, not as inference at request time.
 And whatever ships keeps the ADR-199 rule: ⭐ *a constant is measured, or declared unmeasured with a reason.*
 
-### 📅 The scheduled review — **once GW8 is played: on or after 2026-10-26**
+### ✅ The scheduled review — **held 2026-10-26, once GW8 was played** (ADR-367)
+
+> **Outcome: Phase 1 declined for the season.** ρ reached **+0.9 SE** against a **+1 SE** bar; hit@20,
+> which looked like **+2.1 SE** on four rounds, came back **+0.6 SE** on eight with three rounds worse.
+> ⭐⭐ *The flattering secondary was four rounds of noise.* Question 4 below is answered in ADR-367;
+> question 2 has fresh evidence and is **not** closed; question 1 was not re-run; question 3 is unchanged.
+>
+> ⚠️ The clause *"may not conclude 'not yet' twice without changing something"* is satisfied: this is a
+> **decline**, not another deferral.
+
+The criteria as they were written, kept for the record:
 
 Written down with its criteria now, because ⭐ *a plan with no review date is a plan that gets followed past
 the point it stopped being right* — and this one has a standing reason to drift: **every week that passes

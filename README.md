@@ -28,7 +28,7 @@ Two things changed underneath it this month, and both are worth knowing before y
 publishes itself (ADR-290). Nine testers are on it. ⚠️ *This section said "next: a mobile app" for three
 weeks after it existed* — see ADR-294 for why that is its own kind of bug.
 
-**366 ADRs · 3,193 Python tests · 573 Dart tests · CI green.**
+**367 ADRs · 3,193 Python tests · 573 Dart tests · CI green.**
 *(Counted 2026-10-16. The Dart half is listed separately because until ADR-322 it was not in CI at all — a total that silently included 481 tests nothing ran was the more flattering number.)*
 
 New here? See the **[Product overview](docs/00_Project/PRODUCT.md)** and
@@ -106,10 +106,11 @@ status is **[PROJECT_STATUS.md](docs/00_Project/PROJECT_STATUS.md)**; the forwar
   has no cap, no allowlist and no auth, which was fine when distribution meant sending a file by hand.
 - **Data Hardening** — per-gameweek history + in-season **form** blended into xP; a full history backfill;
   the attack/defence FDR split. Partly unblocked now the season is running.
-- **Under review, on a date** — a learned expected-minutes model. Measured at the Phase 1 gate (ADR-204) and
-  **held**: 📅 reviewed again **on or after 2026-10-26**, once GW8 is played, against a rule written down
-  *before* the data existed. If neither clause is met it is declined for the season. ⭐ *A decline needs a
-  re-measure date, the same as a feature needs a review date.*
+- ✅ **Declined for the season** — a learned expected-minutes model. Measured at the Phase 1 gate (ADR-204),
+  held for a date, and re-decided at GW8 against the rule written *before* the data existed (ADR-367):
+  ρ reached **+0.9 SE against a +1 SE bar**, and hit@20 — **+2.1 SE** on four rounds — came back **+0.6 SE**
+  on eight. ⭐ *The flattering secondary was four rounds of noise*, which is exactly why it was recorded
+  and not acted on. The ceiling is now a measured fact for this season rather than an open question.
 - **Later:** chip optimisers; the full probabilistic xMins model (schedule / European congestion, rotation
   profiles); keyed Reddit / pundit **sentiment** + a crowd-vs-xP **backtest**; evaluation & feedback loops.
   *(xMins **v0** — chance% × historical minutes — is built; see above.)*
