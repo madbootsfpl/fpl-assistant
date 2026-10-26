@@ -122,7 +122,27 @@ backtest before anyone believes it.
 > move Konsa 2.98 → 3.90 against an actual 3.84. The complaint is real, the correction is right, and the
 > ranking gets worse.
 >
-> **Left: A and C.** ⭐ A is the one whose harm *grows with the season*.
+> ❌ **A was measured on 2026-10-26 and declines too** ([ADR-371](./ADR-371-the-ratchet-is-real-and-fixing-it-buys-nothing.md)).
+> ⭐ **Its premise is confirmed and is worse than this ADR said**: the refusal rate runs **49% → 78%** across
+> GW2 → GW8 and the affected population is **115 players, not 23** — ⚠️ *this ADR undercounted its own
+> finding because it sampled the top of a curve it had correctly described as rising.* Loosened to a miss
+> tolerance the guard improves **both** populations on minutes (board MAE 25.7 → 22.4, bias +11.5 → +6.0,
+> and no owned-player regression, unlike B) and moves the ranking **+0.18 SE against a +1 SE bar**.
+>
+> ⚠️ Two claims made for A below do not survive: *"fixes all 23"* (it is 115, and rising) and *"costs ~0.4/GW
+> on Konsa specifically"* — it **helps** Konsa, who has played all of the last five. ⭐ *A cost estimated
+> against GW5's data expired when GW6 was played.*
+>
+> ⭐⭐ And the guard's behaviour at the **top** of the board is the reverse of what "conservative" suggested:
+> it refuses Manzambi (rank 2) and Cherif (rank 20), and the **historical fallback then hands them a full
+> ninety** they have not played in five weeks. *The all-or-nothing guard is not conservative about the
+> number; it is conservative about changing its mind.*
+>
+> **Left: C alone** — the dormant form blend, and §2 above is its case. ⚠️ ADR-371 also leaves one question
+> that is *not* an accuracy question and so is not closed by the bar: a term answering for 22% of the board
+> at GW8 is switching itself off, and nothing measures that.
+
+> **Left (as written 2026-10-26, before A was measured): A and C.** ⭐ A is the one whose harm *grows with the season*.
 
 **Recommendation (as written 2026-09-27): B, then measure D.** B is the smallest change that removes a rule which gets worse with
 time; D is the one that answers the question the owner actually asked, and it should be measured against
