@@ -138,6 +138,11 @@ backtest before anyone believes it.
 > ninety** they have not played in five weeks. *The all-or-nothing guard is not conservative about the
 > number; it is conservative about changing its mind.*
 >
+> ✅ **A SHIPPED ANYWAY, and on purpose** — [ADR-372](./ADR-372-a-window-that-forgets.md), the owner's call
+> on ADR-371's option 2. ⭐⭐ *§B0's bar governs accuracy bids and the ratchet was never one*: the claim was
+> that a rule failing 78% of the time and rising is broken whatever it scores. §3 above is answered — Konsa's
+> share goes **0.879 → 1.000** and the term's reach on the live board goes **20.5% → 37.7%**.
+>
 > **Left: C alone** — the dormant form blend, and §2 above is its case. ⚠️ ADR-371 also leaves one question
 > that is *not* an accuracy question and so is not closed by the bar: a term answering for 22% of the board
 > at GW8 is switching itself off, and nothing measures that.

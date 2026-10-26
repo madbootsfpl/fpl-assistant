@@ -29,6 +29,8 @@ UNAVAILABLE = frozenset({"i", "s", "u", "n"})   # injured / suspended / unavaila
 _MINUTES_SEASONS = 3                         # recent seasons to gauge a typical minutes share
 _FULL_SEASON_MINUTES = 38 * 90               # a full Premier League season of minutes
 _FULL_GAME_MINUTES = 90                      # one match, for the in-season share (ADR-173)
+_WINDOW_GAMEWEEKS = 5                        # the rolling window the in-season guard judges (ADR-372)
+_FORGIVEN_MISSES = 1                         # misses forgiven, but only once that window is full
 
 
 def _field(row, key):
@@ -124,30 +126,53 @@ def completed_gameweeks(gw_history_by_code) -> set:
 
 
 def in_season_share(player, gw_history_by_code, completed=None):
-    """The share of available minutes he has **actually played** — or None when we cannot say (ADR-173).
+    """The share of available minutes he has **actually played** — or None when we cannot say (ADR-173/372).
 
-    Returns a share only for a player who appeared in **every completed gameweek**, with minutes in each.
-    **That guard is the decision, not a caveat.** ADR-125 deferred this on sample size and the objection is
-    real: two gameweeks cannot tell a player rested once from one being phased out. So this refuses the
-    ambiguous case entirely rather than guessing at it — a player who sat one out returns None and keeps his
-    historical share, and cannot be cratered by a single rest.
+    Judged on the **last `_WINDOW_GAMEWEEKS` completed gameweeks**, forgiving up to `_FORGIVEN_MISSES` of
+    them — "played at least 4 of the last 5". Returns None for anything short of that, and **None means
+    unchanged**: the caller keeps his historical share.
 
-    What is left is the case with no ambiguity at all: he has started every week, and last season's minutes
-    are simply the wrong number for him. Calafiori was carrying **0.43** from an injury-hit season while
+    ADR-173's refusal of the ambiguous case is kept and is still the decision. ADR-125's objection is real —
+    two gameweeks cannot tell a player rested once from one being phased out — so the forgiveness applies
+    **only once the window is full**. Below five completed gameweeks this is bit-for-bit ADR-173's original
+    rule: every completed gameweek, with minutes in each. ⭐ *A rule that forgives a miss out of a sample of
+    two has not loosened a guard, it has removed one.*
+
+    What changed is **the ratchet, not the refusal** (ADR-371). *"Every completed gameweek"* got stricter
+    every week it survived — it refused **49% of players at GW2 and 78% by GW8**, trending to single digits
+    by GW25, because one rest in August disqualified a player permanently. ⭐⭐ *A rule whose failure rate
+    only ever rises is one that will eventually disqualify everybody*, and a term that answers for 2% of the
+    board has switched itself off. A window forgets: Konsa's 0-minute GW1 stops counting against him once it
+    rolls out, and he is judged on the five weeks he has just started.
+
+    ⚠️⚠️ **The denominator is `len(recent)`, not `len(played)` — available minutes, not minutes he turned up
+    for.** That is what the docstring's first line claims and it is also what makes the forgiveness safe: a
+    forgiven miss still costs him `1/window` of the share. ⭐ *The window does not protect a rested starter
+    by refusing to answer; it protects him by capping what one bad week can cost him.*
+
+    What is left unambiguous is the case ADR-173 was built for: he has started recently, and last season's
+    minutes are simply the wrong number for him. Calafiori carried **0.43** from an injury-hit season while
     playing **0.94** of the minutes available; Kinsky **0.18** while first choice.
 
-    ⚠️ A player whose club had a **blank** gameweek has no row for it and so does not qualify — he falls back
-    to history. Conservative and correct today (no blanks yet); revisit when the first blank lands, because
-    then "every completed gameweek" and "every gameweek his club played" stop being the same question.
+    🔴 **A player whose club had a BLANK gameweek is now handled WORSE, not better, and this is the one
+    regression the change ships with.** Under ADR-173 a missing row disqualified him outright and he fell
+    back to history. Now it is a *forgiven miss* scored as a 0 against the available denominator — so a
+    blank costs a nailed starter `1/window` of his share rather than nothing. No blanks have landed yet;
+    ADR-173's caveat is unresolved and now has a second claimant. ⚠️ The fix is the same one it always was:
+    *"every completed gameweek"* and *"every gameweek his club played"* are different questions, and nothing
+    here asks the second one.
     """
     completed = completed_gameweeks(gw_history_by_code) if completed is None else completed
     if not completed:
         return None
+    recent = sorted(completed)[-_WINDOW_GAMEWEEKS:]
+    # Forgive only once the window is full — below that, `need == len(recent)` is ADR-173 exactly.
+    need = len(recent) - _FORGIVEN_MISSES if len(recent) >= _WINDOW_GAMEWEEKS else len(recent)
     rows = {_field(r, "round"): r for r in ((gw_history_by_code or {}).get(_field(player, "code")) or [])}
-    played = [rows[g] for g in completed if g in rows]
-    if len(played) < len(completed) or any((_field(r, "minutes") or 0) <= 0 for r in played):
-        return None                                   # missed one, or was not on the sheet for one
-    return min(1.0, sum(_field(r, "minutes") or 0 for r in played) / (len(played) * _FULL_GAME_MINUTES))
+    played = [rows[g] for g in recent if g in rows and (_field(rows[g], "minutes") or 0) > 0]
+    if len(played) < need:
+        return None                                   # missed too many, or was not on the sheet for them
+    return min(1.0, sum(_field(r, "minutes") or 0 for r in played) / (len(recent) * _FULL_GAME_MINUTES))
 
 
 def minutes_weight_from_history(history_by_code, gw_history_by_code=None):

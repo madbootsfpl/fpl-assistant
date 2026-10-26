@@ -269,6 +269,72 @@ def test_the_weight_prefers_played_minutes_over_last_seasons():
     assert minutes_weight_from_history(hist, gwh)(p) == 1.0   # with it
 
 
+# ---- ADR-372: the window forgets, which is the point ----------------------
+
+
+def _started(rounds, minutes=90):
+    return [_gw(r, minutes) for r in rounds]
+
+
+def test_a_miss_in_august_stops_disqualifying_him_once_it_leaves_the_window():
+    """🔴 The ratchet, which is the whole reason ADR-372 exists.
+
+    Konsa played 0 minutes in GW1 and started everything since. Under ADR-173's *"every completed
+    gameweek"* that one row disqualified him **permanently** — the rule got stricter every week it
+    survived, refusing 49% of players at GW2 and 78% by GW8 (ADR-371). A window forgets: five completed
+    gameweeks in, he is judged on four of the last five and qualifies.
+    """
+    gwh = {7: [_gw(1, 0), *_started([2, 3, 4, 5])]}
+    p = {"code": 7, "status": "a", "chance": None}
+    assert in_season_share(p, gwh) == 0.8          # 360 of the 450 available in GW1-5
+
+
+def test_the_forgiven_miss_rolls_out_of_the_window_entirely():
+    # One more gameweek and GW1 is not in the last five at all — he is judged on the weeks he has played.
+    gwh = {7: [_gw(1, 0), *_started([2, 3, 4, 5, 6])]}
+    p = {"code": 7, "status": "a", "chance": None}
+    assert in_season_share(p, gwh) == 1.0
+
+
+def test_a_forgiven_miss_still_costs_him_a_fifth_of_the_share():
+    """⚠️ The denominator is **available** minutes, not minutes he turned up for.
+
+    This is what makes the forgiveness safe rather than a free pass: a miss is scored as the 0 it is
+    against a denominator of five full games. Dividing by games he *appeared in* would hand a rotated
+    player a perfect 1.0 — ⭐ *the window caps what one bad week costs him; it does not refund it.*
+    """
+    gwh = {7: [*_started([1, 2, 3, 4]), _gw(5, 0)]}
+    assert in_season_share({"code": 7, "status": "a", "chance": None}, gwh) == 0.8
+
+
+def test_two_misses_in_the_window_still_refuse_to_answer():
+    # ADR-173's refusal is kept, not removed — it is the ratchet that went, not the guard.
+    gwh = {7: [_gw(1, 0), _gw(2, 0), *_started([3, 4, 5])]}
+    assert in_season_share({"code": 7, "status": "a", "chance": None}, gwh) is None
+
+
+def test_nothing_is_forgiven_until_the_window_is_full():
+    """⭐⭐ ADR-125's objection, kept intact — and the bug a first draft of ADR-371's spike shipped.
+
+    Two gameweeks cannot tell a player rested once from one being phased out. Forgiving a miss out of a
+    sample of two does not loosen that guard, it **removes** it — and the spike that measured this change
+    did exactly that, "rescuing" 106 players at GW3. So below a full window the rule is ADR-173's
+    original, unchanged: every completed gameweek, with minutes in each.
+    """
+    for upto in (2, 3, 4):
+        rounds = list(range(1, upto + 1))
+        gwh = {7: [_gw(1, 0), *_started(rounds[1:])]}
+        assert in_season_share({"code": 7}, gwh) is None, f"forgave a miss at {upto} completed gameweeks"
+
+
+def test_the_window_only_ever_answers_where_the_old_rule_also_did_or_refused():
+    """The superset property, asserted rather than asserted *about*: the new rule never turns a share into
+    a None. ⭐ *A loosening that refuses a case the strict rule answered is two changes wearing one name.*
+    """
+    every_week = {7: _started([1, 2, 3, 4, 5, 6])}
+    assert in_season_share({"code": 7}, every_week) == 1.0
+
+
 def test_availability_still_gates_the_in_season_share():
     # A flagged player is unavailable no matter how many minutes he has played — chance_factor still applies.
     gwh = {7: [_gw(1, 90), _gw(2, 90)]}

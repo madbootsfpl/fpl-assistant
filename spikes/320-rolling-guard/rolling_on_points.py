@@ -22,11 +22,14 @@ from src.storage import Storage  # noqa: E402
 
 # Adjacency runs down the `tolerance` column at a fixed window — "forgive one miss in the last five" is the
 # knob option A proposed, so that is the axis a gain has to hold across.
+# ⚠️ `full_only=True` only — forgiving a miss out of a sample of two is ADR-125's objection, not a
+# loosening of it (see `rolling.py`). The `False` column is in the minutes sweep for contrast and is
+# not a shippable candidate.
 GRID = [(None, None, None, "ADR-173 (the app)")]
 for _w in (3, 4, 5, 6, 8):
-    for _t in (0, 1, 2, 3):
+    for _t in (0, 1, 2):
         if _t < _w:
-            GRID.append((_w, _t, "available", f"last {_w}, forgive {_t}"))
+            GRID.append((_w, _t, True, f"last {_w}, forgive {_t}"))
 
 
 def main():
@@ -38,12 +41,12 @@ def main():
     fixtures: dict[int, list] = {}
     real_factory = xp_mod.minutes_weight_from_history
 
-    def predict_with(window, tolerance, denom):
+    def predict_with(window, tolerance, full_only):
         def predict(before, n):
             upcoming = fixtures.setdefault(n, store.get_fixtures_by_event(n))
             if window is not None:
                 xp_mod.minutes_weight_from_history = (
-                    lambda h, gw=None, _a=(window, tolerance, denom): rolling_factory(*_a, h, gw))
+                    lambda h, gw=None, _a=(window, tolerance): rolling_factory(*_a, "available", h, gw, True))
             try:
                 ranked = xp_mod.decision_xp(players, upcoming, history, horizon=1,
                                             gw_history_by_code=before)
@@ -56,8 +59,8 @@ def main():
     se = backtest.spearman_se(backtest.eligible_n(backtest.pairs(gw_history, predict_with(None, None, None))))
     print(f"  {'guard':<24} {'rho':>8} {'MAE':>7} {'hit@20':>8}   per-round rho{'':>12}   vs live")
     base = None
-    for window, tolerance, denom, label in GRID:
-        triples = backtest.pairs(gw_history, predict_with(window, tolerance, denom))
+    for window, tolerance, full_only, label in GRID:
+        triples = backtest.pairs(gw_history, predict_with(window, tolerance, full_only))
         by_gw: dict[int, list] = {}
         for pred, actual, rnd in triples:
             by_gw.setdefault(rnd, []).append((pred, actual))

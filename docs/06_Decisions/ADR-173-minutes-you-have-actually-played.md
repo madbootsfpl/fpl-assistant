@@ -4,6 +4,14 @@
 **Date:** 2026-09-02
 **Status:** ✅ **Accepted — owner-reported, measured, gated, built** (Sprint 234, 2026-09-02).
 **1667 → 1679 tests, ruff clean.**
+⚠️ **The guard was replaced on 2026-10-26 by [ADR-372](./ADR-372-a-window-that-forgets.md).** The *refusal*
+survives untouched — what went is the **ratchet**: *"every completed gameweek"* got stricter every week it
+survived, refusing 49% of players at GW2 and **78% by GW8** and trending toward single digits
+([ADR-371](./ADR-371-the-ratchet-is-real-and-fixing-it-buys-nothing.md)). ⭐⭐ *A rule whose failure rate only
+ever rises is one that will eventually disqualify everybody* — and this one was quietly decommissioning the
+term it guards. It is now **the last 5 completed gameweeks, forgiving 1**, with the forgiveness gated on a
+full window so ADR-125's small-sample objection still holds. ⭐ **This ADR's own tests are what pin that
+gate**, and they still pass unchanged.
 **Superseded By / Replaces:** **Partly supersedes ADR-125's blanket defer** of the in-season minutes share —
 which was re-affirmed as recently as 2026-09-01 and was correct on the evidence then. Completes the pair
 ADR-172 opened (it fixed the *rate*; this is the *minutes*). Surfaces **ADR-132**'s existing banking

@@ -2,9 +2,11 @@
 
 **Decision ID:** ADR-371
 **Date:** 2026-10-26
-**Status:** ⏳ **Gate — measured, not built.** Option A **declines on §B0's bar** (+0.18 SE against +1 SE)
-and is **dominated by option B, which already declined**. One question is left for the owner and it is not
-an accuracy question. **No production code changed.** 3,194 tests (unchanged), ruff clean.
+**Status:** ✅ **Closed — the owner chose option 2 and it is built: [ADR-372](./ADR-372-a-window-that-forgets.md).**
+Originally: ⏳ *Gate — measured, not built.* Option A **declines on §B0's bar** (+0.18 SE against +1 SE) and is
+**dominated by option B, which already declined** — but the ratchet argument is not an accuracy argument, and
+that is what shipped. 🔴 **Two corrections below: the rule measured here was looser than this ADR described,
+and was re-measured before shipping.**
 **Superseded By / Replaces:** Runs option **A** of [ADR-320](./ADR-320-a-defender-rated-on-a-season-he-no-longer-plays.md).
 Would have replaced [ADR-173](./ADR-173-minutes-you-have-actually-played.md)'s guard. Sits beside
 [ADR-204](./ADR-204-the-phase-1-gate.md) / [ADR-367](./ADR-367-the-gw8-review-phase-1-declined.md), which
@@ -46,6 +48,22 @@ fills, looser after. Every number below is the second version.
 candidate must reproduce `in_season_share` **exactly**. It does — on shares, and to **+0.0000 SE** on the
 ranking. *A sweep whose baseline is not reproduced by its own parameterisation is comparing two different
 things.*
+
+> 🔴 **CORRECTION (same day, before shipping — ADR-372).** The sentence above claiming *"identical to
+> ADR-173 until the window fills"* **is false of the rule this ADR measured.** `max(1, ...)` starts forgiving
+> a miss at **two** completed gameweeks — the ratchet table below shows **106 players "rescued" at GW3**, on
+> a sample of two. That is [ADR-125](./ADR-125-in-season-minutes-share.md)'s objection, not a loosening of
+> it. ⭐⭐ *A rule that forgives a miss out of a sample of two has not loosened a guard, it has removed one.*
+>
+> ⚠️ And ADR-173's **own test suite said so** — `test_sitting_one_gameweek_out_falls_back_to_history…` is a
+> two-gameweek fixture with one 0, and it fails against the rule measured here. ⭐ *I ran an identity check
+> at the far end of the grid, where the two rules trivially agree, and never ran one at the near end, where
+> the behaviour actually diverges.*
+>
+> Every number in **this** ADR is the uncorrected rule. ADR-372 gated the forgiveness on a full window and
+> re-measured: `last 5, forgive 1` becomes board MAE **25.3** (not 24.7) and ρ **+0.084 SE** (not +0.094),
+> the first five per-round ρ values go **bit-identical** to live, and `last 8, forgive 1` scores
+> **+0.0000 SE** because its window never fills in eight gameweeks.
 
 ---
 
@@ -190,7 +208,13 @@ only thing that makes it admissible"* — passes here.
    term's reach is visible, and revisit when it crosses a pre-registered floor. ⭐ *The cheapest response to
    a slow failure is a number that makes it loud.*
 
-**Recommendation: 2, at `last 5, forgive 1`** — with 3 as the fallback if the owner would rather not widen
+> ✅ **The owner chose 2.** Built as [ADR-372](./ADR-372-a-window-that-forgets.md) — on the *corrected*
+> rule, and at ADR-320's pre-registered `≥ 4 of the last 5` rather than the `last 3` setting that scored
+> better, because ⭐ *a value picked off a curve drawn on eight gameweeks has already spent some of its
+> result* (ADR-204, the lesson that cost ADR-367 a feature). ⚠️ Option 3 was **not** taken, so nothing
+> reports the reach if it starts falling again.
+
+**Recommendation (as written, before the owner's call): 2, at `last 5, forgive 1`** — with 3 as the fallback if the owner would rather not widen
 §B0 twice. The reason is not the +0.09 SE; it is that **no setting of this candidate is worse on anything
 measured**, which is a materially different position from B (which shipped an owned-player regression) and
 D (which made ρ worse). ⚠️ If 1 is chosen, 3 should be taken anyway — the decay is real either way.

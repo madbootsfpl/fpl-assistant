@@ -39,7 +39,8 @@ FULL_GAME = 90
 START = 60
 
 
-def rolling_share(player, gw_history_by_code, completed, window, tolerance, denom="available"):
+def rolling_share(player, gw_history_by_code, completed, window, tolerance, denom="available",
+                  full_only=False):
     """ADR-173's share, judged on the last `window` completed gameweeks, forgiving `tolerance` misses.
 
     Returns None — "we cannot say, keep his historical share" — when he missed more than `tolerance` of the
@@ -54,7 +55,14 @@ def rolling_share(player, gw_history_by_code, completed, window, tolerance, deno
     name.* `max(1, ...)` keeps it a true superset: identical to ADR-173 until the window fills, looser after.
     """
     recent = sorted(completed)[-window:]
-    need = max(1, len(recent) - tolerance)
+    # ⚠️⚠️ `full_only` is the difference between a superset and a *guess*. With `max(1, ...)` alone the
+    # tolerance starts biting at **two** completed gameweeks — 106 players "rescued" at GW3 — which is
+    # precisely ADR-125's objection that two rounds cannot tell a rest from a phase-out. ⭐ *A rule that
+    # forgives a miss out of a sample of two has not loosened a guard, it has removed one.* Forgiving only
+    # once the window is full keeps ADR-125 intact and makes the claim "identical to ADR-173 until the
+    # window fills" actually true.
+    need = (len(recent) - tolerance) if (len(recent) >= window or not full_only) else len(recent)
+    need = max(1, need)
     rows = {r["round"]: r for r in ((gw_history_by_code or {}).get(player["code"]) or [])}
     played = [rows[g] for g in recent if g in rows and (rows[g]["minutes"] or 0) > 0]
     if len(played) < need:
@@ -63,12 +71,13 @@ def rolling_share(player, gw_history_by_code, completed, window, tolerance, deno
     return min(1.0, sum(r["minutes"] or 0 for r in played) / (over * FULL_GAME))
 
 
-def rolling_factory(window, tolerance, denom, history_by_code, gw_history_by_code=None):
+def rolling_factory(window, tolerance, denom, history_by_code, gw_history_by_code=None,
+                    full_only=False):
     """`minutes_weight_from_history` with the guard swapped — everything else identical."""
     completed = completed_gameweeks(gw_history_by_code) if gw_history_by_code else set()
 
     def weight(player):
-        share = (rolling_share(player, gw_history_by_code, completed, window, tolerance, denom)
+        share = (rolling_share(player, gw_history_by_code, completed, window, tolerance, denom, full_only)
                  if completed else None)
         if share is not None:
             return chance_factor(player) * share
@@ -164,19 +173,19 @@ def main():
 
     base = row("ADR-173 (the app)", lambda h, before: minutes_weight_from_history(h, before))
     best = None
-    for denom in ("available", "appeared"):
-        print(f"  {'-- denominator: ' + denom:<30}")
+    for full_only in (True, False):
+        print(f"  {'-- forgive only once the window is full: ' + str(full_only):<30}")
         for window in (3, 4, 5, 6, 8):
-            for tol in (0, 1, 2, window - 1):
+            for tol in (0, 1, 2):
                 if tol >= window:
                     continue
-                f = (lambda w, t, dn: lambda h, before: rolling_factory(w, t, dn, h, before))(
-                    window, tol, denom)
+                f = (lambda w, t, fo: lambda h, before: rolling_factory(w, t, "available", h, before, fo))(
+                    window, tol, full_only)
                 b, o = row(f"  last {window}, forgive {tol}", f)
                 if best is None or b["mae"] < best[-1]["mae"]:
-                    best = (window, tol, denom, b)
+                    best = (window, tol, full_only, b)
     w, tol, dn, b = best
-    print(f"\n  baseline board MAE {base[0]['mae']:.1f} -> best guard (last {w}, forgive {tol}, {dn}) "
+    print(f"\n  baseline board MAE {base[0]['mae']:.1f} -> best guard (last {w}, forgive {tol}, full_only={dn}) "
           f"at {b['mae']:.1f} ({(b['mae'] - base[0]['mae']) / base[0]['mae']:+.1%})")
     db.close()
 
