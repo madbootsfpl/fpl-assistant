@@ -114,6 +114,15 @@ backtest before anyone believes it.
 > direction `k` should go, which argues for a **different shape of model** rather than a better constant.
 > That is **D** — *"the only one that addresses the actual complaint"*. **The recommendation below should
 > be re-read as: D, measured against `backtest.py`.**
+>
+> ❌ **D was measured the same day and declines too** ([ADR-370](./ADR-370-option-d-was-already-built-and-it-declines.md)).
+> ⚠️ And D is **not** *"a modelling change, not a parameter"* as written below: **ADR-188 built it two
+> weeks before this ADR** and held `CLEAN_SHEET_WEIGHT` at 0. ⭐ *An options list is also a claim about
+> what exists.* On eight gameweeks, scored on DEF/GK, ρ **declines monotonically** — while the term does
+> move Konsa 2.98 → 3.90 against an actual 3.84. The complaint is real, the correction is right, and the
+> ranking gets worse.
+>
+> **Left: A and C.** ⭐ A is the one whose harm *grows with the season*.
 
 **Recommendation (as written 2026-09-27): B, then measure D.** B is the smallest change that removes a rule which gets worse with
 time; D is the one that answers the question the owner actually asked, and it should be measured against

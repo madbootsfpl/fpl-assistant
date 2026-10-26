@@ -28,7 +28,7 @@ Two things changed underneath it this month, and both are worth knowing before y
 publishes itself (ADR-290). Nine testers are on it. ⚠️ *This section said "next: a mobile app" for three
 weeks after it existed* — see ADR-294 for why that is its own kind of bug.
 
-**369 ADRs · 3,193 Python tests · 573 Dart tests · CI green.**
+**370 ADRs · 3,193 Python tests · 573 Dart tests · CI green.**
 *(Counted 2026-10-16. The Dart half is listed separately because until ADR-322 it was not in CI at all — a total that silently included 481 tests nothing ran was the more flattering number.)*
 
 New here? See the **[Product overview](docs/00_Project/PRODUCT.md)** and
