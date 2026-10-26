@@ -441,7 +441,26 @@ def run_backfill(store: Storage, *, now=None, force: bool = False, client=None, 
     store.set_data_status(backfilled_at=stamp, backfilled_event=max(rounds) if rounds else None,
                           backfilled_schema=HISTORY_SCHEMA if failures == 0 else None)
     return {"ran": True, "ok": failures == 0, "reason": why, "rounds": sorted(rounds),
-            "counts": (players, seasons, gameweeks, failures)}
+            "counts": (players, seasons, gameweeks, failures),
+            "reach": _reach(store)}
+
+
+def _reach(store: Storage):
+    """`(answered, eligible, below_floor)` for the in-season minutes term, or None if unreadable.
+
+    ⭐ Computed **here** rather than on the hourly refresh because the reach only moves when a gameweek's
+    rows land, which is exactly what a backfill is. One line per gameweek, not one per hour — ⚠️ *an
+    alarm that fires every hour is an alarm nobody reads.*
+
+    Never raises. ⭐ *A number added to catch a silent failure must not become one*, so a reach that cannot
+    be computed reports nothing rather than taking the backfill down with it.
+    """
+    from src.analytics.minutes import in_season_reach
+
+    try:
+        return in_season_reach(store.get_players(), store.get_gw_history_by_code())
+    except Exception:                                  # noqa: BLE001 — see the docstring
+        return None
 
 
 def describe_backfill(outcome: dict) -> str:
@@ -452,4 +471,26 @@ def describe_backfill(outcome: dict) -> str:
         return f"FAILED — {outcome['reason']}."
     players, _seasons, gameweeks, failures = outcome["counts"]
     tail = f" ⚠ {failures} player(s) failed and will be retried" if failures else ""
-    return (f"Backfilled GW{outcome['rounds']}: {gameweeks} gameweek rows from {players} players{tail}.")
+    return (f"Backfilled GW{outcome['rounds']}: {gameweeks} gameweek rows from {players} players{tail}."
+            + describe_reach(outcome.get("reach")))
+
+
+def describe_reach(reach) -> str:
+    """The in-season term's share of the board, as a sentence — ADR-373's whole deliverable.
+
+    ⭐ It prints on **every** backfill, not only when it is bad. A number that appears only on a fault is
+    a number nobody has a baseline for, and the fault then reads as a glitch in the alarm.
+    """
+    from src.analytics import minutes
+
+    if not reach:
+        return ""
+    answered, eligible, below = reach
+    if not eligible:
+        return ""
+    warn = ""
+    if below:
+        warn = (f" ⚠ BELOW THE {minutes.REACH_FLOOR:.1%} FLOOR — the rolling window is reaching less of"
+                f" the board than the all-or-nothing rule it replaced (ADR-372/373).")
+    return (f" In-season minutes term answers for {answered}/{eligible} players"
+            f" ({answered / eligible:.1%}).{warn}")

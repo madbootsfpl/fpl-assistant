@@ -32,6 +32,12 @@ _FULL_GAME_MINUTES = 90                      # one match, for the in-season shar
 _WINDOW_GAMEWEEKS = 5                        # the rolling window the in-season guard judges (ADR-372)
 _FORGIVEN_MISSES = 1                         # misses forgiven, but only once that window is full
 
+#: ⭐⭐ **The share of the board the in-season term must keep answering for** (ADR-373). Not a tuning knob
+#: and not arbitrary: **0.205 is what ADR-173's rule had decayed to at the moment it was replaced** — so if
+#: the rolling window ever does *worse* than the all-or-nothing rule it replaced, the window is not working.
+#: ⚠️ A floor derived from a measured fact, pre-registered before it can be breached.
+REACH_FLOOR = 0.205
+
 
 def _field(row, key):
     """Read `key` from a sqlite Row or a dict, returning None if absent (mirrors xp._get)."""
@@ -173,6 +179,37 @@ def in_season_share(player, gw_history_by_code, completed=None):
     if len(played) < need:
         return None                                   # missed too many, or was not on the sheet for them
     return min(1.0, sum(_field(r, "minutes") or 0 for r in played) / (len(recent) * _FULL_GAME_MINUTES))
+
+
+def in_season_reach(players, gw_history_by_code, completed=None) -> tuple[int, int, bool]:
+    """How much of the board the in-season term still speaks for — `(answered, eligible, below_floor)`.
+
+    ⭐⭐ **ADR-372 fixed a term that was decommissioning itself, and nothing would have reported it if the
+    fix stopped working.** ADR-173's guard refused 49% of players at GW2 and 78% by GW8 — a reach falling
+    toward single digits — and the only reason anybody noticed was that an owner asked about one defender.
+    ⭐ *A fix applied once is not a fix that stays applied*, and the cheapest response to a slow failure is a
+    number that makes it loud.
+
+    `eligible` counts players whose club has actually played. A player with no rows at all is not a refusal
+    — he is a player we know nothing about, and no guard would help him.
+
+    ⚠️ `below_floor` is **False until the window has filled**. Before then the reach is naturally high and
+    falling (one completed gameweek qualifies anyone who played it), so a floor would fire on the ordinary
+    shape of an opening month rather than on a fault.
+
+    ⭐ **This is a report, not a table, and the difference is the point.** ADR-203 had to *store* availability
+    as it passed because FPL serves it as a now-field that cannot be backfilled. The reach can be recomputed
+    from stored history for any round at any time — so recording it would be keeping a second copy of a
+    derivable number. *The same lesson does not imply the same mechanism.*
+    """
+    completed = completed_gameweeks(gw_history_by_code) if completed is None else completed
+    eligible = [p for p in (players or [])
+                if ((gw_history_by_code or {}).get(_field(p, "code")) or [])]
+    answered = [p for p in eligible
+                if in_season_share(p, gw_history_by_code, completed) is not None]
+    settled = len(completed) >= _WINDOW_GAMEWEEKS
+    below = bool(eligible) and settled and (len(answered) / len(eligible)) < REACH_FLOOR
+    return len(answered), len(eligible), below
 
 
 def minutes_weight_from_history(history_by_code, gw_history_by_code=None):

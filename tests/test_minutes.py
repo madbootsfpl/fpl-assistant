@@ -11,6 +11,7 @@ from src.analytics.minutes import (
     chance_factor,
     completed_gameweeks,
     expected_minutes,
+    in_season_reach,
     in_season_share,
     minutes_share,
     minutes_weight_from_history,
@@ -333,6 +334,56 @@ def test_the_window_only_ever_answers_where_the_old_rule_also_did_or_refused():
     """
     every_week = {7: _started([1, 2, 3, 4, 5, 6])}
     assert in_season_share({"code": 7}, every_week) == 1.0
+
+
+# ---- ADR-373: a number that makes the decay loud ---------------------------
+
+
+def test_the_reach_counts_only_players_whose_club_has_played():
+    """A player with no rows is not a refusal — he is a player we know nothing about.
+
+    ⭐ Counting him as a denominator would make the reach look worse every time FPL added a squad member,
+    which is a metric that moves on transfers rather than on the thing it is watching.
+    """
+    gwh = {7: _started([1, 2, 3, 4, 5]), 8: [_gw(1, 0), *_started([2, 3, 4, 5])]}
+    players = [{"code": 7}, {"code": 8}, {"code": 9}]       # 9 has no rows at all
+    answered, eligible, _ = in_season_reach(players, gwh)
+    assert (answered, eligible) == (2, 2)
+
+
+def test_the_reach_counts_the_refused_against_it():
+    gwh = {7: _started([1, 2, 3, 4, 5]), 8: [_gw(1, 0), _gw(2, 0), *_started([3, 4, 5])]}
+    answered, eligible, _ = in_season_reach([{"code": 7}, {"code": 8}], gwh)
+    assert (answered, eligible) == (1, 2)                    # 8 missed two of the last five
+
+
+def test_the_floor_does_not_fire_before_the_window_has_filled():
+    """⭐⭐ The reach is *naturally* high and falling in the opening month — one completed gameweek
+    qualifies anyone who played it. A floor that fires on that shape is reporting the calendar, not a fault.
+    """
+    gwh = {7: [_gw(1, 0), _gw(2, 0)], 8: [_gw(1, 0), _gw(2, 0)]}
+    answered, eligible, below = in_season_reach([{"code": 7}, {"code": 8}], gwh)
+    assert (answered, eligible) == (0, 2)                    # reach is 0% …
+    assert below is False                                    # … and still not a breach
+
+
+def test_the_floor_fires_once_the_window_has_filled():
+    # Five completed gameweeks and nobody qualifies: the window is full and the term is not reaching.
+    rounds = [1, 2, 3, 4, 5]
+    gwh = {c: [_gw(r, 0) for r in rounds] for c in (7, 8)}
+    answered, eligible, below = in_season_reach([{"code": 7}, {"code": 8}], gwh)
+    assert (answered, eligible, below) == (0, 2, True)
+
+
+def test_a_healthy_reach_is_not_a_breach():
+    rounds = [1, 2, 3, 4, 5]
+    gwh = {c: _started(rounds) for c in (7, 8)}
+    assert in_season_reach([{"code": 7}, {"code": 8}], gwh) == (2, 2, False)
+
+
+def test_the_reach_is_empty_rather_than_dividing_by_zero():
+    assert in_season_reach([], {}) == (0, 0, False)
+    assert in_season_reach(None, None) == (0, 0, False)
 
 
 def test_availability_still_gates_the_in_season_share():

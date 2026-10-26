@@ -587,3 +587,48 @@ def test_the_pipeline_requirements_cover_what_it_imports():
     for workflow in ("data.yml", "backfill.yml"):
         text = (root / ".github/workflows" / workflow).read_text()
         assert "requirements-pipeline.txt" in text, f"{workflow} still installs the full app requirements"
+
+
+# ---- ADR-373: the in-season term's reach, reported ------------------------
+
+
+def test_the_backfill_line_says_how_much_of_the_board_the_term_reaches():
+    """⭐ It prints on **every** backfill, not only when it is bad.
+
+    A number that appears only on a fault is a number nobody has a baseline for, and the fault then reads
+    as a glitch in the alarm rather than as the thing it is reporting.
+    """
+    line = pipeline.describe_backfill(
+        {"ran": True, "reason": "x", "rounds": [8], "counts": (5, 0, 5, 0), "reach": (252, 669, False)})
+    assert "answers for 252/669 players (37.7%)" in line
+    assert "FLOOR" not in line
+
+
+def test_the_backfill_line_shouts_when_the_reach_falls_through_the_floor():
+    """🔴 ADR-372 fixed a term that was decommissioning itself. This is the only thing that would notice
+    if the fix stopped working — ⭐ *a fix applied once is not a fix that stays applied.*"""
+    line = pipeline.describe_backfill(
+        {"ran": True, "reason": "x", "rounds": [20], "counts": (5, 0, 5, 0), "reach": (40, 669, True)})
+    assert "BELOW THE 20.5% FLOOR" in line
+    assert "(6.0%)" in line
+
+
+def test_an_unreadable_reach_is_silence_rather_than_noise_or_a_crash():
+    # ⭐ A number added to catch a silent failure must not become one.
+    base = {"ran": True, "reason": "x", "rounds": [8], "counts": (5, 0, 5, 0)}
+    assert pipeline.describe_reach(None) == ""
+    assert pipeline.describe_reach((0, 0, False)) == ""
+    assert pipeline.describe_backfill(base).endswith("players.")        # no "reach" key at all
+
+
+def test_reading_the_reach_never_takes_the_backfill_down():
+    """The backfill's whole contract is that it never raises (an unattended job that dies tells nobody
+    anything). A diagnostic bolted onto it must not be the thing that breaks that."""
+    class Broken:
+        def get_players(self):
+            raise RuntimeError("database went away mid-report")
+
+        def get_gw_history_by_code(self):
+            return {}
+
+    assert pipeline._reach(Broken()) is None

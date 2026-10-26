@@ -164,9 +164,11 @@ demoting players the historical fallback was promoting on last season's ninety m
   GW15, when it has had ten.
 - ⚠️ **`_WINDOW_GAMEWEEKS` and `_FORGIVEN_MISSES` are now two more unfitted constants.** They were chosen
   by ADR-320's prose, not by a sweep, *deliberately* — but they are parameters and they are not calibrated.
-- **ADR-371's option 3 (instrument the decay) was not taken.** Shipping this resets the reach to 37.7%
-  rather than making it visible, so nothing will report it if it starts falling again. ⭐ *A fix applied once
-  is not a fix that stays applied.*
+- ~~**ADR-371's option 3 (instrument the decay) was not taken.**~~ ✅ **Taken the same day** —
+  [ADR-373](./ADR-373-a-number-that-makes-the-decay-loud.md). Shipping this reset the reach to 37.7% rather
+  than making it visible, so nothing would have reported it if it started falling again. ⭐ *A fix applied
+  once is not a fix that stays applied* — so the reach is now a line in the Actions log every gameweek, with
+  a floor derived from what the rule this replaced had decayed to.
 - **C — the dormant form blend — is now the last unopened option on ADR-320.**
 
 ---

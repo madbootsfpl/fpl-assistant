@@ -208,11 +208,16 @@ only thing that makes it admissible"* — passes here.
    term's reach is visible, and revisit when it crosses a pre-registered floor. ⭐ *The cheapest response to
    a slow failure is a number that makes it loud.*
 
+> ✅ **The owner chose 2 — and then 3 as well.** Option 3 is built as
+> [ADR-373](./ADR-373-a-number-that-makes-the-decay-loud.md): the backfill now reports what share of the
+> board the in-season term answers for, with a floor of **20.5%** — *what ADR-173's rule had decayed to at
+> the moment it was replaced*, so the alarm says one falsifiable thing rather than a round number.
+>
 > ✅ **The owner chose 2.** Built as [ADR-372](./ADR-372-a-window-that-forgets.md) — on the *corrected*
 > rule, and at ADR-320's pre-registered `≥ 4 of the last 5` rather than the `last 3` setting that scored
 > better, because ⭐ *a value picked off a curve drawn on eight gameweeks has already spent some of its
 > result* (ADR-204, the lesson that cost ADR-367 a feature). ⚠️ Option 3 was **not** taken, so nothing
-> reports the reach if it starts falling again.
+> reported the reach if it started falling again — **since closed by ADR-373.**
 
 **Recommendation (as written, before the owner's call): 2, at `last 5, forgive 1`** — with 3 as the fallback if the owner would rather not widen
 §B0 twice. The reason is not the +0.09 SE; it is that **no setting of this candidate is worse on anything
