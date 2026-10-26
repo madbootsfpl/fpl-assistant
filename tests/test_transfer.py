@@ -542,3 +542,32 @@ def test_a_near_tie_is_a_band_around_the_leader_not_a_bucket():
     assert top["out"]["web_name"] == "SunA", (
         "1.7 apart is inside the 2.0 band, so the diversified sell must win however the numbers happen to "
         f"round: {top['out']['web_name']}")
+
+
+def test_a_player_already_on_the_bench_is_never_called_displaced():
+    """🔴🔴 **A claim about nothing.** `displaces` names who stops starting because of a move, and it was
+    computed from the engine's **best legal XI** rather than the manager's actual one — so a player he had
+    already benched could be named as losing a place he was not occupying.
+
+    ⭐⭐ It is ADR-273's complaint in a second place: the gain learned about his bench and the sentence
+    underneath it did not. ⚠️ *"Pickford stops starting" is useless advice to a manager who benched
+    Pickford* — `displaces` exists to say what he must **do**.
+    """
+    # ⭐ A squad where the best legal XI and the manager's XI disagree about one man: a strong keeper the
+    # manager has benched anyway, which is exactly the shape the owner reported.
+    owned = [_dp(1, "Keeper A", "GK", "ARS", 5.0), _dp(2, "Keeper B", "GK", "CHE", 4.5)]
+    owned += [_dp(10 + i, f"D{i}", "DEF", "LIV", 4.5) for i in range(5)]
+    owned += [_dp(20 + i, f"M{i}", "MID", "MCI", 5.5) for i in range(5)]
+    owned += [_dp(30 + i, f"F{i}", "FWD", "NEW", 6.0) for i in range(3)]
+    market = owned + [_dp(99, "Better", "GK", "EVE", 5.0)]
+
+    xp = {p["id"]: 2.0 for p in market}
+    xp[1] = 9.0        # the benched keeper the engine would start
+    xp[99] = 9.5       # and a better one to buy
+
+    moves = suggest_transfers(owned, market, xp, bench_ids=[1], bank=10.0, limit=5, xi_aware=True)
+    named = [m["displaces"]["id"] for m in moves if m.get("displaces")]
+    assert 1 not in named, "a benched player was described as stopping starting"
+    # 📌 The other side is already guarded on the real squad, in `test_service_endpoints.py`:
+    # *"this squad's fixture must contain a move that changes the lineup"* — ⭐ so a fix that simply
+    # names nobody fails there. A hand-built squad reproducing that is a fixture fighting the optimiser.

@@ -290,12 +290,12 @@ def suggest_transfers(
             "gain": gain,
             "out_on_bench": out["id"] in bench,
             # ⭐⭐ **What the gain assumes you will also do** (ADR-273).
-            **_lineup_condition(owned, out, c, rank_xp, xi_aware),
+            **_lineup_condition(owned, out, c, rank_xp, xi_aware, bench),
         })
     return suggestions
 
 
-def _lineup_condition(owned, out, incoming, rank_xp, xi_aware: bool) -> dict:
+def _lineup_condition(owned, out, incoming, rank_xp, xi_aware: bool, bench=frozenset()) -> dict:
     """Whether this move's gain needs a **lineup change**, and whom it displaces.
 
     ⚠️⚠️ **The owner, on a suggestion to replace his benched keeper:** *"Leno to Tzolakis won't provide a
@@ -334,7 +334,18 @@ def _lineup_condition(owned, out, incoming, rank_xp, xi_aware: bool) -> dict:
 
     # ⚠️ The outgoing player is excluded: he leaves the squad, so of course he stops starting. ⭐ *Naming
     # him as "displaced" would describe the transfer itself as a consequence of the transfer.*
-    dropped = [p for p in owned if p["id"] in before and p["id"] not in after and p["id"] != out["id"]]
+    #
+    # 🔴🔴 **And so is anyone the manager has ALREADY benched** (ADR-368). `before` is the engine's *best
+    # legal* XI, not the manager's actual one — so a player he had on the bench could be named as losing a
+    # place he was not occupying. ⚠️⚠️ *"Pickford stops starting" is a claim about nothing when Pickford
+    # was benched*, and `displaces` exists to tell the reader what he must **do**.
+    #
+    # ⭐⭐ It is also the owner's own complaint in a second place: ADR-273 was written because a suggestion
+    # quoted a gain that assumed he would start a keeper he benches. The gain learned about his bench; the
+    # sentence underneath it did not.
+    dropped = [p for p in owned
+               if p["id"] in before and p["id"] not in after
+               and p["id"] != out["id"] and p["id"] not in bench]
     return {"displaces": _summary(dropped[0], rank_xp) if dropped else None}
 
 

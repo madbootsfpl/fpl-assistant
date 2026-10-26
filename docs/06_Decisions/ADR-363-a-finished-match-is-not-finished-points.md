@@ -21,7 +21,7 @@ The owner's four stages, and what each one is read from. ⭐ **Measured on GW6 a
 | **live** — the match is on | `started`, not `finished_provisional` | — |
 | **pending** — full time, nothing awarded | `finished_provisional`, `bonus` block empty | the whistle flips at full time: 13:37 for Everton–Chelsea (ADR-356) |
 | **provisional** — awarded, week open | `bonus` block filled, `finished` false | ⭐⭐ **32 hours after GW7's first kick-off every match had its 3-2-1 and not one was `finished`** |
-| **final** — the gameweek is locked | `finished` | GW6: `data_checked = true`, ten finished. GW7: neither |
+| **final** — the gameweek is locked | `finished` | GW6: `data_checked = true`, ten finished. GW7: neither. 🔴 **Falsified at GW8 — see below** |
 
 ## 🔴 One correction to the proposal, and it is the load-bearing one
 
@@ -46,6 +46,32 @@ nothing at all.
 
 ⭐ The card draws a chip beside the bonus race — *live*, *bonus to come*, *provisional* — and **nothing
 once the week is locked**: ⚠️ *a label on every state is a label nobody reads.*
+
+## 🔴 GW8 falsified the stage-4 signal
+
+> *"`finished` flips with the **gameweek**… So it stands in for the lock, and no `bootstrap-static` call
+> is needed for it."*
+
+**Measured 2026-10-26, 18.8 hours after GW8's last kick-off:**
+
+```
+fixtures finished:   10/10
+event.data_checked:  False
+event.finished:      False
+```
+
+⚠️⚠️ **The two come apart.** `fixture.finished` means *this match's bonus is confirmed*; `data_checked`
+means *the gameweek is checked and locked*. GW6 and GW7 happened to agree because both were long settled
+when they were measured — ⭐ *two agreeing observations of things that coincide most of the time is not
+evidence that they are the same thing*, and I generalised from exactly two.
+
+📌 **The practical cost is small and real:** for at least 18 hours the card reads **final** — no chip at
+all — on a week FPL has not checked. The owner's own framing separated *"after the post-match update"*
+from *"at the official gameweek lock"*, and the implementation collapsed them.
+
+⏳ **Not fixed here, because the fix reopens a cost this ADR closed.** `data_checked` lives only in
+`bootstrap-static`, which is why it was avoided; the premise that made avoiding it free is now gone. That
+is a decision about a fetch or a schema column, so it wants its own gate rather than a quiet addition.
 
 ## Consequences
 
