@@ -143,7 +143,18 @@ backtest before anyone believes it.
 > that a rule failing 78% of the time and rising is broken whatever it scores. §3 above is answered — Konsa's
 > share goes **0.879 → 1.000** and the term's reach on the live board goes **20.5% → 37.7%**.
 >
-> **Left: C alone** — the dormant form blend, and §2 above is its case. ⚠️ ADR-371 also leaves one question
+> ❌ **C was measured the same day and declines too** ([ADR-374](./ADR-374-the-last-option-and-the-whole-arc.md)):
+> peak **+0.05 SE** against a +1 SE bar, searched to the end of the domain, MAE rising from the first step.
+> ⭐ §2 above is **vindicated** — Konsa's form rate is **8.40 per 90** against a 2.98 base and the term moves
+> him +0.50 xP, the widest blast radius of the four (220 of 669 players) exactly as predicted. **The board
+> does not get better.**
+>
+> ✅ **THIS GATE IS CLOSED — all four options measured.** ⭐⭐⭐ *Every one of the four moves Konsa the right
+> way and not one makes the board better*, which is not four failures but a measurement of the headroom
+> ADR-202 had already bounded. ⚠️ And §1 — *the rate cannot see he changed clubs* — is the part no shipped
+> change ever addressed; D was the attempt and it declined.
+>
+> **Left (as written before C was measured): C alone** — the dormant form blend, and §2 above is its case. ⚠️ ADR-371 also leaves one question
 > that is *not* an accuracy question and so is not closed by the bar: a term answering for 22% of the board
 > at GW8 is switching itself off, and nothing measures that.
 

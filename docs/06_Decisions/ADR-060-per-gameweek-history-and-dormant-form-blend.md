@@ -5,6 +5,10 @@
 **Status:** Accepted
 **Superseded By / Replaces:** none — the first **Data Hardening** step. Extends the history archive of
 ADR-027 (past seasons) into the current season, and the one-xP recipe of ADR-041 with an in-season form term.
+⚠️ **The dormancy is now a MEASURED decision (2026-10-26, [ADR-374](./ADR-374-the-last-option-and-the-whole-arc.md)).**
+`FORM_WEIGHT` stays **0** — swept 0 → 1.0 on 8 gameweeks, peak gain **+0.05 SE** against a +1 SE bar, MAE
+rising monotonically from the first step and hit@20 never beating the baseline. ⭐ *The reason this term was
+dormant was that nobody had measured what it did to the board; that reason no longer exists.*
 **Deciders / Participants:** Tony Sheridan (Owner), ChatGPT (Technical Lead), Claude Code (Implementation)
 
 ---
