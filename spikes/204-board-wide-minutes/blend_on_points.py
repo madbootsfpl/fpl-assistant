@@ -52,7 +52,10 @@ def main():
     se = backtest.spearman_se(backtest.eligible_n(backtest.pairs(gw_history, predict_with(None))))
     print(f"  {'weight':<24} {'rho':>8} {'MAE':>7} {'hit@20':>8}   per-round rho{'':>10}   vs live")
     base = None
-    for k, label in ((None, "xMins v0 (the app)"), (1, "blend, k=1"), (2, "blend, k=2"), (3, "blend, k=3")):
+    # ⭐ Sub-1 values added at the GW8 review (ADR-369) — `k = 1` was the edge of the original grid.
+    grid = [(None, "xMins v0 (the app)")]
+    grid += [(k, f"blend, k={k}") for k in (0.1, 0.25, 0.5, 0.75, 1, 2, 3)]
+    for k, label in grid:
         triples = backtest.pairs(gw_history, predict_with(k))
         by_gw = {}
         for pred, actual, rnd in triples:
@@ -62,11 +65,14 @@ def main():
         rho = backtest.mean_gw_spearman(triples)
         if base is None:
             base = rho
-        delta = "" if k is None else f"   {rho - base:+.3f}  = {(rho - base) / se:+.1f} SE"
+        # ⚠️⚠️ **Four decimals on the SE, because the decision lives in the third.** At GW8 the best
+        # value printed as "+1.0 SE" at three — and was +1.006, while the next one printed the same and
+        # was +0.952. ⭐ *A rounded number at a threshold is a number that has already decided for you.*
+        delta = "" if k is None else f"   {rho - base:+.5f}  = {(rho - base) / se:+.4f} SE"
         print(f"  {label:<24} {rho:>8.3f} {backtest.mae(triples):>7.2f} "
               f"{backtest.hit_rate(triples, 20):>8.2f}   {cells}{delta}")
 
-    print(f"\n  1 SE = {se:.3f}   §B0 bar: a gain of +1 SE, across >=2 adjacent values, MAE and hit@20 not falling")
+    print(f"\n  1 SE = {se:.6f}   §B0 bar: a gain of +1 SE, across >=2 adjacent values, MAE and hit@20 not falling")
     print("  ADR-202's ceiling for reference: perfect minutes = +0.206 (5.1 SE), of which "
           "+0.061 (1.5 SE) is information rather than appearance-point arithmetic")
     store.close()

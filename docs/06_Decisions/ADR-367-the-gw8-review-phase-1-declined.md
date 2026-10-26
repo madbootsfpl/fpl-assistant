@@ -84,6 +84,10 @@ answer after seeing the curve — the exact failure ADR-190 and ADR-204 both nam
 the right re-fit, it was the right re-fit a month ago.* Recorded here as a gap in the pre-registration for
 the owner to rule on, not as an argument against the outcome.
 
+> ✅ **Ruled on the same day: the owner asked for it, and [ADR-369](./ADR-369-the-edge-of-the-grid.md) ran
+> it. The decline stands** — exactly one value clears, by 0.006 SE, where §B0 requires two adjacent, and
+> it is the one value where hit@20 falls. ⭐ The gap is closed empirically rather than left open.
+
 ### Consequences
 
 📌 ADR-173's all-or-nothing rule stands. ADR-192 stays Proposed. The ceiling is now a **measured fact for

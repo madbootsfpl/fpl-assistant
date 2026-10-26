@@ -107,7 +107,9 @@ def main():
 
     base = row("xMins v0 (the app)", lambda h, before: minutes_weight_from_history(h, before))
     best = None
-    for k in (1, 2, 3, 5, 8):
+    # ⭐ Sub-1 values added at the GW8 review (ADR-369): `k = 1` was the **edge** of the original grid,
+    # and a bar missed at the edge of a search is a bar that was never fully tested.
+    for k in (0.1, 0.25, 0.5, 0.75, 1, 2, 3, 5, 8):
         b, o = row(f"blend, k={k}", (lambda kk: lambda h, before: blended_factory(kk, h, before))(k))
         if best is None or b["mae"] < best[1]["mae"]:
             best = (k, b, o)
