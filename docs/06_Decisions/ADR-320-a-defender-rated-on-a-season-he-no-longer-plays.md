@@ -101,7 +101,21 @@ it is dormant is that nobody has measured what it does to the board*, which is t
 the actual complaint. ⚠️⚠️ Also the largest: it is a modelling change, not a parameter, and it needs a
 backtest before anyone believes it.
 
-**Recommendation: B, then measure D.** B is the smallest change that removes a rule which gets worse with
+> ✅ **Unblocked 2026-10-26, and option B is now measured.** This gate waited on ADR-204 so as not to
+> pre-empt it. ADR-204 was **declined** at the GW8 review ([ADR-367](./ADR-367-the-gw8-review-phase-1-declined.md),
+> [ADR-369](./ADR-369-the-edge-of-the-grid.md)) — and ⭐⭐ **ADR-204's blend *is* option B**: the same
+> shrinkage of in-season share against history, on the same ADR-173 rule.
+>
+> It improves minutes accuracy by up to **37.5%** and does **not** improve the ranking enough to ship: ρ
+> +0.9 SE against a +1 SE bar, and hit@20 *falls* at the only `k` that clears. ⚠️ So **B is no longer the
+> small safe option — it is the measured-and-declined one.**
+>
+> ⭐ ADR-369's finding points the same way as this ADR's own §1: ρ and hit@20 disagree about which
+> direction `k` should go, which argues for a **different shape of model** rather than a better constant.
+> That is **D** — *"the only one that addresses the actual complaint"*. **The recommendation below should
+> be re-read as: D, measured against `backtest.py`.**
+
+**Recommendation (as written 2026-09-27): B, then measure D.** B is the smallest change that removes a rule which gets worse with
 time; D is the one that answers the question the owner actually asked, and it should be measured against
 `backtest.py` before it is proposed.
 
