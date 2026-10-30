@@ -276,7 +276,35 @@ def run(store: Storage, *, now=None, force: bool = False, client=None, elo_clien
     # ⚠️ **The board count is its own key, not folded into `counts`.** `ingest.refresh` returns a 4-tuple
     # that `describe()` unpacks positionally — appending to it would break the line a person actually reads.
     return {"ran": True, "ok": True, "reason": why, "counts": counts,
-            "board": published, "team_dna": team_dna, "clips": clips}
+            "board": published, "team_dna": team_dna, "clips": clips,
+            "crowd": crowd_phase(store)}
+
+
+def crowd_phase(store):
+    """`(event, hours_to_deadline)` for the crowd reading currently settled, or None.
+
+    ⭐⭐ **ADR-210 built `player_transfer_flow` so readings would be phase-comparable, and nothing reports
+    the phase.** The counters reset at each deadline and climb all week, so a reading taken 0.6 h out and
+    one taken 4.9 h out are not the same evidence — which is exactly what happened at GW7 and GW8
+    (ADR-377). ⚠️ A series whose comparability cannot be seen is one that will be averaged as though it
+    were comparable, and ADR-190 is the record of that costing a measurement.
+
+    ⭐ Printed on **every** tick, not only when it is bad: the phase is a countdown, so seeing it fall is
+    how you know the capture is alive. *A number that appears only on a fault is a number nobody has a
+    baseline for.*
+
+    Never raises — a side-record's diagnostic must not take down the refresh that wrote it.
+    """
+    try:
+        rows = store.transfer_flow()
+        if not rows:
+            return None
+        latest = max(r["event"] for r in rows)
+        phases = [r["hours_to_deadline"] for r in rows
+                  if r["event"] == latest and r["hours_to_deadline"] is not None]
+        return (latest, min(phases)) if phases else (latest, None)
+    except Exception:            # noqa: BLE001 — see the docstring
+        return None
 
 
 def describe(outcome: dict) -> str:
@@ -300,6 +328,11 @@ def describe(outcome: dict) -> str:
         # noise in the one line a person actually reads.*
         clips = outcome.get("clips") or 0
         tdna += f", {clips} highlight{'' if clips == 1 else 's'}" if clips else ""
+        crowd = outcome.get("crowd")
+        if crowd and crowd[1] is not None:
+            tdna += f", crowd GW{crowd[0]} @ {crowd[1]:.1f}h"
+        elif crowd:
+            tdna += f", crowd GW{crowd[0]} @ unknown phase"
         return (f"Published {players} players, {teams} teams, {fixtures} fixtures, {elo} Elo{xp}{tdna} "
                 f"({outcome['reason']}).")
     return f"REFUSED — {outcome['reason']}. The last good data still stands."

@@ -980,7 +980,16 @@ class Storage:
                 "ON CONFLICT(element_code, event) DO UPDATE SET "
                 "observed_at = excluded.observed_at, hours_to_deadline = excluded.hours_to_deadline, "
                 "transfers_in = excluded.transfers_in, transfers_out = excluded.transfers_out, "
-                "selected_by = excluded.selected_by", rows)
+                "selected_by = excluded.selected_by "
+                # ⭐⭐ **Keep the reading CLOSEST to the deadline, not the last one written** (ADR-377).
+                # The schema comment above says the row "settles on the LAST reading taken before N's
+                # deadline" — which was true only *because* later runs happen to be closer. ⚠️ It is an
+                # accident of ordering, not a property: one run writing a NULL phase, or a replay of an
+                # older snapshot, silently replaced the best evidence of the week with worse. ⭐ *A
+                # guarantee the data happens to satisfy is not a guarantee.*
+                "WHERE excluded.hours_to_deadline IS NOT NULL "
+                "  AND (player_transfer_flow.hours_to_deadline IS NULL "
+                "       OR excluded.hours_to_deadline < player_transfer_flow.hours_to_deadline)", rows)
         return len(rows)
 
     def transfer_flow(self, event=None) -> list:

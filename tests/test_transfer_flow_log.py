@@ -203,3 +203,59 @@ def test_a_refresh_does_not_make_one_round_trip_per_player():
         f"{calls['execute']} statements for 300 players — this scales per player, and each one is a "
         "network round trip in production")
     assert calls["executemany"] >= 2, "the bulk writes must be batched, not looped"
+
+
+# ---- ADR-377: the reading we keep is the closest one, not the last one ------
+
+
+def test_a_closer_reading_replaces_the_one_already_held():
+    """⭐ The row must settle on the reading nearest the deadline — that is the only point in the week
+    which is comparable across weeks."""
+    db = _store()
+    db.save_transfer_flow([_P(1, transfers_in_event=100)], 9, "2026-10-25T00:00:00+00:00",
+                          hours_to_deadline=120.0)
+    db.save_transfer_flow([_P(1, transfers_in_event=900)], 9, "2026-10-31T10:00:00+00:00",
+                          hours_to_deadline=1.0)
+    (row,) = db.transfer_flow(9)
+    assert (row["hours_to_deadline"], row["transfers_in"]) == (1.0, 900)
+    db.close()
+
+
+def test_a_reading_further_from_the_deadline_is_refused():
+    """⭐⭐ The property the schema comment CLAIMED and the code only happened to satisfy.
+
+    *"The row settles on the LAST reading taken before N's deadline"* was true only because later runs are
+    usually closer. ⚠️ That is an accident of ordering, not a guarantee — a replayed snapshot or an
+    out-of-order write silently replaced the best evidence of the week with worse. ⭐ *A guarantee the data
+    happens to satisfy is not a guarantee.*
+    """
+    db = _store()
+    db.save_transfer_flow([_P(1, transfers_in_event=900)], 9, "2026-10-31T10:00:00+00:00",
+                          hours_to_deadline=1.0)
+    db.save_transfer_flow([_P(1, transfers_in_event=5)], 9, "2026-10-20T00:00:00+00:00",
+                          hours_to_deadline=200.0)
+    (row,) = db.transfer_flow(9)
+    assert (row["hours_to_deadline"], row["transfers_in"]) == (1.0, 900), "the worse reading won"
+    db.close()
+
+
+def test_a_reading_with_no_phase_never_displaces_one_that_has_it():
+    # ⚠️ An unknown phase is unusable evidence; overwriting a known-good reading with it is a net loss.
+    db = _store()
+    db.save_transfer_flow([_P(1, transfers_in_event=900)], 9, "2026-10-31T10:00:00+00:00",
+                          hours_to_deadline=1.0)
+    db.save_transfer_flow([_P(1, transfers_in_event=5)], 9, "2026-10-31T11:00:00+00:00",
+                          hours_to_deadline=None)
+    (row,) = db.transfer_flow(9)
+    assert (row["hours_to_deadline"], row["transfers_in"]) == (1.0, 900)
+    db.close()
+
+
+def test_the_first_reading_of_a_gameweek_is_always_kept():
+    # No row yet → the insert must land however far out it was taken.
+    db = _store()
+    db.save_transfer_flow([_P(1, transfers_in_event=7)], 9, "2026-10-01T00:00:00+00:00",
+                          hours_to_deadline=700.0)
+    (row,) = db.transfer_flow(9)
+    assert row["transfers_in"] == 7
+    db.close()

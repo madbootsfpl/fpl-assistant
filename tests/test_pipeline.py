@@ -632,3 +632,61 @@ def test_reading_the_reach_never_takes_the_backfill_down():
             return {}
 
     assert pipeline._reach(Broken()) is None
+
+
+# ---- ADR-377: the crowd reading's phase, reported ------------------------
+
+
+def test_the_phase_reported_is_the_closest_reading_of_the_latest_gameweek():
+    """⭐⭐ ADR-210 built the table so readings would be phase-comparable, and nothing reported the phase.
+
+    GW7's reading landed 0.6 h from the deadline and GW8's 4.9 h — a 4.4 h swing on an accumulating
+    counter. ⚠️ *A series whose comparability cannot be seen is one that will be averaged as though it were
+    comparable*, and ADR-190 is the record of that costing a measurement.
+    """
+    from dataclasses import dataclass
+
+    @dataclass
+    class _P:
+        code: int
+        transfers_in_event: int = 0
+        transfers_out_event: int = 0
+        selected_by: float = 10.0
+
+    db = Storage(":memory:")
+    db.save_transfer_flow([_P(1)], 8, "2026-10-23T12:33:00+00:00", hours_to_deadline=4.93)
+    db.save_transfer_flow([_P(1)], 9, "2026-10-31T10:26:00+00:00", hours_to_deadline=0.56)
+    # ⚠️ A second player filed at a WORSE phase for the same gameweek. ⭐ Without him this test could not
+    # tell `min` from `max` — one row per event makes them the same number, and a mutant that swapped them
+    # passed. *A test with a one-element sample cannot pin a choice between aggregates.*
+    db.save_transfer_flow([_P(2)], 9, "2026-10-29T10:00:00+00:00", hours_to_deadline=49.0)
+    assert pipeline.crowd_phase(db) == (9, 0.56)      # the latest gameweek, at its closest reading
+    db.close()
+
+
+def test_no_readings_yet_is_silence_rather_than_a_claim():
+    db = Storage(":memory:")
+    assert pipeline.crowd_phase(db) is None
+    db.close()
+
+
+def test_reading_the_phase_never_takes_the_refresh_down():
+    # ⭐ A side-record's diagnostic must not break the refresh that wrote it.
+    class Broken:
+        def transfer_flow(self):
+            raise RuntimeError("table does not exist on this database")
+
+    assert pipeline.crowd_phase(Broken()) is None
+
+
+def test_the_refresh_line_names_the_crowd_reading_every_tick():
+    """⭐ The phase is a countdown, so seeing it fall is how you know the capture is alive — it prints on
+    every tick, not only when it is bad."""
+    line = pipeline.describe({
+        "ran": True, "ok": True, "reason": "ordinary hours", "counts": (669, 20, 380, 20),
+        "board": {"rows": 669, "first_event": 9}, "team_dna": {"rows": 20}, "clips": 0,
+        "crowd": (9, 0.56)})
+    assert "crowd GW9 @ 0.6h" in line
+    assert "crowd" not in pipeline.describe({
+        "ran": True, "ok": True, "reason": "x", "counts": (1, 1, 1, 1),
+        "board": {"rows": 1, "first_event": 9}, "team_dna": {"rows": 1}, "clips": 0, "crowd": None})
