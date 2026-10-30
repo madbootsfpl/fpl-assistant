@@ -1,8 +1,13 @@
 name: Data pipeline
 
 # The scheduled refresh (ADR-211, Phase 2c) — what replaces a person running `reseed` and committing a
-# binary. Ticks hourly — see the schedule below — and lets `app.py pipeline` decide whether anything
-# is due.
+# binary. Ticks, and lets `app.py pipeline` decide whether anything is due.
+#
+# ⭐⭐ **THE TICK COMES FROM OUTSIDE THIS FILE NOW** (ADR-378). A Cloudflare Worker cron trigger
+# (`trigger/`) calls `workflow_dispatch` every **10 minutes**, because GitHub's own cron does not fire at
+# the rate it declares — measured twice: `*/15` at 6-7% of declared (2026-09-26) and `0 * * * *` arriving a
+# median **3.9 h** apart (100 runs, 2026-10-30). ⚠️ *So the `schedule:` below is a BACKSTOP, not the
+# mechanism.* Read it as "what happens if the worker is gone", not as the cadence.
 #
 # ⭐ **The schedule lives in Python, not in this cron line, because the thing it depends on moves every week.**
 # GitHub cannot know when Saturday's deadline is; the fixtures can. So the tick is dumb and frequent, and the
@@ -28,6 +33,10 @@ on:
     #
     # 📌 Actually fixing freshness means driving the tick from something that keeps time and using GitHub
     # as the worker — a decision with a token in it, deliberately not taken here.
+    # ⚠️ **The backstop, deliberately left hourly** (ADR-378). The external trigger supplies the real
+    # cadence; this is what the pipeline falls back to if that worker is deleted or Cloudflare's cron turns
+    # out to be no better than GitHub's. ⭐ *A replacement for an unreliable mechanism should not also be a
+    # single point of failure.* Removing this line would make the worker exactly that.
     - cron: "0 * * * *"
   workflow_dispatch:
     inputs:

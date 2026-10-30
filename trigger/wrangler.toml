@@ -1,0 +1,21 @@
+name = "madboots-pipeline-trigger"
+main = "worker.js"
+compatibility_date = "2026-10-30"
+
+# Every 10 minutes — matched to the **tightest** interval `cadence()` asks for, which is `INTERVAL_LIVE`
+# (10 min, "a gameweek is in play"), not `INTERVAL_PRE_DEADLINE` (15 min).
+#
+# ⚠️⚠️ **This was 15 and a test caught it.** Scoping it from the pre-deadline interval alone would have left
+# the live-gameweek policy unreachable — ⭐ *the same class of bug this worker exists to fix, reintroduced
+# one layer up*. `test_the_cron_is_at_least_as_often_as_the_tightest_policy_interval` reads both constants
+# from `src/pipeline.py`, so tightening a policy interval later fails loudly here instead of silently
+# going unserved.
+#
+# ⭐ Free on a public repo: 144 dispatches a day, and a tick with nothing to do exits in well under a
+# second and makes no FPL request at all.
+#
+# ⚠️ GitHub's own `schedule:` in data.yml is KEPT as a backstop. If this worker is deleted, rots, or
+# Cloudflare's cron turns out to be no better, the pipeline falls back to exactly today's behaviour rather
+# than stopping. ⭐ *A replacement for an unreliable mechanism should not also be a single point of failure.*
+[triggers]
+crons = ["*/10 * * * *"]
