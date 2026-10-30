@@ -62,6 +62,39 @@ echo "  checking…"
 # ⚠️ And deliberately **no `MADBOOTS_DEV`**: that flag adds the Settings ▸ Server field for aiming at a
 # laptop (ADR-270). This build is the real one, so it gets the real address and no way to change it.
 #
+# ── 1c. make the seven days real ──────────────────────────────────────────────────────────────────
+# 🔴🔴 **This script's promise was false and the phone proved it.** On 2026-10-30 the app was reinstalled at
+# 14:35 and stopped launching at **14:52** — `flutter build ios` had re-signed with a **cached profile
+# created seven days earlier**, so re-running bought seventeen minutes. The warning at the bottom said
+# *"re-running this fixes it"*, which is only true if the build mints a NEW profile. It does not; it reuses
+# whatever is cached until the cache is cleared.
+#
+# ⭐⭐ *"Re-running fixes it" was an instruction that quietly stopped being true, and nothing checked.*
+# Xcode reissues automatically once the stale file is gone, so the fix is to take it away.
+#
+# ⚠️ Moved, never deleted: if Apple cannot be reached the build fails, and the owner should still have the
+# file that was working this morning.
+. "$(dirname "$0")/lib/ios_profile.sh"
+stale_dir="${TMPDIR:-/tmp}/madboots-stale-profiles"
+for dir in "${IOS_PROFILE_DIRS[@]}"; do
+  [ -d "$dir" ] || continue
+  for prof in "$dir"/*.mobileprovision; do
+    [ -e "$prof" ] || continue
+    case "$(profile_name "$prof")" in *com.madboots.fpl*) ;; *) continue ;; esac
+    exp=$(profile_expiry "$prof")
+    [ -n "$exp" ] || continue
+    left=$(hours_left "$exp") || continue
+    if should_purge "$exp" "$IOS_PROFILE_MIN_HOURS"; then
+      mkdir -p "$stale_dir" && mv "$prof" "$stale_dir/"
+      if [ "$left" -lt 0 ]; then
+        echo "  ⟳ cached profile expired ${left#-}h ago — set aside so Xcode issues a fresh seven days"
+      else
+        echo "  ⟳ cached profile has only ${left}h left — set aside so Xcode issues a fresh seven days"
+      fi
+    fi
+  done
+done
+
 # ⭐ `--release`, not debug: a debug build is materially slower on a phone, and judging the app's feel from
 # one would be judging the wrong thing.
 (cd mobile && flutter build ios --release --dart-define=MADBOOTS_API="$API" >/tmp/release_ios.log 2>&1) \
@@ -103,6 +136,25 @@ else
   echo "  ⓘ  installed — the device did not answer a version query, so check the home screen"
 fi
 
+# ── 5. say WHEN it dies ───────────────────────────────────────────────────────────────────────────
+# ⭐⭐ **Read from the artefact, not asserted from the calendar.** The old line here said "expires after
+# SEVEN DAYS", which is a fact about free provisioning and was **not** a fact about the build it had just
+# installed — that one had seventeen minutes left. ⭐ *A warning that states the policy instead of the
+# measurement cannot tell you the policy was not applied.*
+expiry=$(profile_expiry mobile/build/ios/iphoneos/Runner.app/embedded.mobileprovision)
+read -r verdict left iso <<<"$(expiry_verdict "$expiry")"
+pretty=$(date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "${iso:-}" "+%a %d %b, %H:%M UTC" 2>/dev/null || echo "${iso:-}")
 echo
-echo "  ⚠️  Free provisioning expires after SEVEN DAYS and the app stops launching."
-echo "     Re-run this script to fix it. That weekly minute is what the £79/yr buys away (ADR-239)."
+case "$verdict" in
+  critical)
+    # 🔴 The symptom of the 2026-10-30 failure recurring. Loud, because the app dies before the owner next
+    # thinks about it.
+    echo "  🔴 THIS BUILD EXPIRES IN ${left}h — $pretty"
+    echo "     That is not a fresh seven days: the build re-used a cached profile. Re-run this script." ;;
+  ok)
+    echo "  ⚠️  This build stops launching on $pretty (${left}h from now)."
+    echo "     Re-run this script to renew it — that weekly minute is what the £79/yr buys away (ADR-239)." ;;
+  *)
+    echo "  ⚠️  Could not read the build's expiry, so the seven days is unverified here."
+    echo "     Free provisioning expires after SEVEN DAYS; re-run this script to renew it (ADR-239)." ;;
+esac
