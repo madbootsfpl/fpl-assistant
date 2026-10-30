@@ -48,6 +48,7 @@ from src.analytics import (
     team_fdr,
     team_schedule,
 )
+from src.analytics.cleansheet import unpriced_defence_by_id
 from src.analytics.crowd import exodus_detector
 from src.analytics.headlines import leavers
 from src.analytics.transfer import TIE_NOISE_WINDOW
@@ -852,7 +853,10 @@ def cmd_transfer(args) -> None:
                 source=args.type, horizon=TIE_NOISE_WINDOW, minutes_weighted=show_xmins,
                 gw_history_by_code=store.get_gw_history_by_code(),
             )}
-        _tie = {"window": args.next, "horizon_xp": _wide}
+        # ADR-376 — the sell-side guard, on the owner's surface for the same reason it is on the app's.
+        _tie = {"window": args.next, "horizon_xp": _wide,
+                "sell_doubt": unpriced_defence_by_id(players, store.get_history_by_code(),
+                                                     store.get_all_fixtures())}
         bench_ids = squad.get("bench_ids", [])
         xi_aware = not args.raw   # XI-gain ranking by default; --raw for the old raw-player-gain (ADR-046)
 

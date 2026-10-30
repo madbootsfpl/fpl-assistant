@@ -95,7 +95,11 @@ def transfers(request: TransfersRequest, *, store: Storage | None = None) -> dic
     request.validate()
     store, ours = opened(store)
     try:
-        data = load(request.player_ids, request.horizon, store)
+        # ⚠️ `need_doubt=True` since ADR-376: the sell-side guard reads the defence behind a player's
+        # historical rate, and without it the guard is silently empty — ⭐ *a guard that is a no-op in
+        # production is worse than none, because the tests still pass.* It costs past-season history +
+        # fixtures (186 KB, flat); ADR-218's board optimisation and the per-gameweek saving both stand.
+        data = load(request.player_ids, request.horizon, store, need_doubt=True)
     finally:
         if ours:
             store.close()
@@ -103,6 +107,7 @@ def transfers(request: TransfersRequest, *, store: Storage | None = None) -> dic
     common = {
         "bench_ids": request.bench_ids, "bank": request.bank, "reported_out": data.leaving,
         "window": request.horizon, "horizon_xp": data.horizon_xp,
+        "sell_doubt": data.sell_doubt,
     }
     moves = (suggest_transfer_plan(data.owned, data.players, data.xp_by_id, count=request.count, **common)
              if request.count > 1

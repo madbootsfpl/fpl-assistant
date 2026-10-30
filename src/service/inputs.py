@@ -54,6 +54,7 @@ class Loaded:
     history: dict | None = None
     gw_history: dict | None = None
     events: dict | None = None
+    sell_doubt: dict | None = None
 
 
 def reported_leavers(owned, players, store) -> dict:
@@ -81,7 +82,35 @@ def reported_leavers(owned, players, store) -> dict:
         return {}
 
 
-def load(player_ids, horizon, store, *, need_history=False, need_events=False) -> Loaded:
+def defence_doubt(players, history, fixtures) -> dict:
+    """`{id: pts/match his xP understates him by}` through his defence alone (ADR-376).
+
+    ⭐⭐ **In the shared layer for the reason `reported_leavers` gives above** — ADR-151→156 is the record of
+    one fact being re-taught to six surfaces one at a time, with every gap found by the owner using the
+    product. This one reaches `suggest_transfers`, and it will reach the chat and the web the same way.
+
+    ⚠️⚠️ **Past-season history and FIXTURES, never the per-gameweek history.** ADR-218 cut the transfer
+    endpoint's read by ranking on the published board, and a test asserts the saving because *"a version that
+    reads the board and loads the history anyway passes every other test in this file"*. The per-gameweek
+    history is the half that **grows ~45 KB a week to ~1.7 MB by May**; past seasons are a flat 186 KB and
+    fixtures are 380 rows. ⭐ *Clean sheets come out of the scorelines identically and for a cost that does
+    not climb all season.*
+
+    ⭐ **Never load-bearing.** Empty when the rows were not loaded, and empty on any failure: a guard that
+    stops the advice working is worse than the advice it was guarding against.
+    """
+    if not history or not fixtures:
+        return {}
+    try:
+        from src.analytics.cleansheet import unpriced_defence_by_id
+
+        return unpriced_defence_by_id(players, history, fixtures)
+    except Exception:                                    # noqa: BLE001 — a guard, never a dependency
+        return {}
+
+
+def load(player_ids, horizon, store, *, need_history=False, need_events=False,
+         need_doubt=False) -> Loaded:
     """Resolve `player_ids` against the market and price everything the horizon needs.
 
     ⚠️ Raises on an unknown id rather than dropping it. ⭐ *A squad quietly analysed as fourteen players is a
@@ -119,6 +148,11 @@ def load(player_ids, horizon, store, *, need_history=False, need_events=False) -
         leaving=reported_leavers(owned, players, store),
         history=history, gw_history=gw_history,
         events=store.headline_events_by_id() if need_events else None,
+        # ⭐ Opt-in: only the surfaces that advise a SALE need it, and `load` serves eight others.
+        sell_doubt=(defence_doubt(players,
+                                  history if history is not None else store.get_history_by_code(),
+                                  store.get_all_fixtures())
+                    if need_doubt else {}),
     )
 
 

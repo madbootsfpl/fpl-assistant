@@ -571,3 +571,79 @@ def test_a_player_already_on_the_bench_is_never_called_displaced():
     # 📌 The other side is already guarded on the real squad, in `test_service_endpoints.py`:
     # *"this squad's fixture must contain a move that changes the lineup"* — ⭐ so a fix that simply
     # names nobody fails there. A hand-built squad reproducing that is a fixture fighting the optimiser.
+
+
+# ---- ADR-376: not on a number we know is biased ---------------------------
+#
+# ⭐ `xi_aware=False` throughout: the guard acts on `gain`, whatever produced it, and a one-defender squad
+# cannot form a legal XI so the XI-aware path returns nothing at all. ⚠️ My first draft of these tests used
+# the default and every one of them failed — *including the one I had read as passing.*
+
+
+def _one_def():
+    owned = [_p(1, "DEF", "ARS", 5.0)]
+    return owned, owned + [_p(2, "DEF", "BBB", 5.0)]
+
+
+def _raw(owned, market, xp, **kw):
+    return suggest_transfers(owned, market, xp, xi_aware=False, **kw)
+
+
+def test_a_sale_the_doubt_fully_explains_is_withheld():
+    """🔴 The complaint this exists for: the engine advised testers to sell Konsa.
+
+    He was DEF #50 of 217 while his Arsenal teammate Gabriel was #3 on the same back line, because his rate
+    was earned at Aston Villa and `CLEAN_SHEET_WEIGHT` is 0 so no clean-sheet term is priced at all.
+    ⭐⭐ *We are not claiming to know what he is worth; we are declining to advise a sale on a number we
+    know is biased downward.*
+    """
+    owned, market = _one_def()
+    xp = {1: 3.0, 2: 4.0}                                        # a +1.0 gain
+    assert _raw(owned, market, xp, window=1) != []               # advised today
+    assert _raw(owned, market, xp, window=1, sell_doubt={1: 1.5}) == []
+
+
+def test_a_gain_bigger_than_the_doubt_still_stands():
+    # ⭐ A test, not a blanket: the guard withholds what the bias explains and nothing more.
+    owned, market = _one_def()
+    xp = {1: 3.0, 2: 9.0}                                        # +6.0, beyond any plausible mis-pricing
+    assert _raw(owned, market, xp, window=1, sell_doubt={1: 1.5}) != []
+
+
+def test_the_doubt_is_netted_against_the_incoming_player():
+    """⚠️⚠️ Crediting the outgoing defender and not his replacement would compare a corrected player
+    against an uncorrected one and freeze every defender sale — ⭐ *a one-sided correction applied to one
+    side of a comparison is a thumb on the scale, not a guard.*
+    """
+    owned, market = _one_def()
+    xp = {1: 3.0, 2: 4.0}
+    assert _raw(owned, market, xp, window=1, sell_doubt={1: 1.5}) == []
+    # the replacement is behind just as good a defence → nothing to correct for, the move stands
+    assert _raw(owned, market, xp, window=1, sell_doubt={1: 1.5, 2: 1.5}) != []
+
+
+def test_the_doubt_scales_with_the_window_it_is_judged_over():
+    # The doubt is pts/MATCH; the gain is xP over `window` gameweeks.
+    owned, market = _one_def()
+    xp = {1: 3.0, 2: 6.0}                                        # +3.0 over the window
+    assert _raw(owned, market, xp, window=1, sell_doubt={1: 1.0}) != []   # 3.0 > 1.0
+    assert _raw(owned, market, xp, window=5, sell_doubt={1: 1.0}) == []   # 3.0 <= 5.0
+
+
+def test_no_doubt_is_exactly_todays_behaviour():
+    owned, market = _one_def()
+    xp = {1: 3.0, 2: 4.0}
+    plain = _raw(owned, market, xp, window=1)
+    assert _raw(owned, market, xp, window=1, sell_doubt=None) == plain
+    assert _raw(owned, market, xp, window=1, sell_doubt={}) == plain
+
+
+def test_the_guard_holds_across_a_coordinated_plan():
+    """⭐ A sale we decline to advise on move 1 is one we decline to advise on move 3 — otherwise the guard
+    is bypassed by asking for two transfers instead of one."""
+    owned = [_p(1, "DEF", "ARS", 5.0), _p(3, "MID", "CCC", 5.0)]
+    market = owned + [_p(2, "DEF", "BBB", 5.0), _p(4, "MID", "DDD", 5.0)]
+    xp = {1: 3.0, 2: 4.0, 3: 3.0, 4: 9.0}
+    plan = suggest_transfer_plan(owned, market, xp, count=2, window=1,
+                                 xi_aware=False, sell_doubt={1: 1.5})
+    assert [m["out"]["id"] for m in plan] == [3]       # the midfield move only; the defender is withheld

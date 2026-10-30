@@ -216,17 +216,27 @@ def test_the_captain_reads_history_even_when_a_board_is_published(store, monkeyp
     assert seen, "captain must still read the raw history when a board exists"
 
 
-def test_transfers_skip_the_history_when_a_board_is_published(store, monkeypatch):
+def test_transfers_never_read_the_per_gameweek_history_when_a_board_is_published(store, monkeypatch):
     """⭐ The other side of the same decision (ADR-218): the transfer search ranks on a total the pipeline
-    already computed, so it reads ~250 KB instead of 1.9 MB. ⚠️ Asserting the *saving*, because a version
-    that reads the board and loads the history anyway passes every other test in this file."""
+    already computed, instead of re-pricing the board from raw rows. ⚠️ Asserting the *saving*, because a
+    version that reads the board and loads the history anyway passes every other test in this file.
+
+    ⚠️⚠️ **Narrowed by ADR-376, deliberately, and the boundary moved to where the cost is.** The sell-side
+    guard needs the defence behind a player's historical rate, so **past-season history is now read on
+    purpose** — a flat **186 KB**. What stays forbidden is `get_gw_history_by_code`: that is the half which
+    **grows ~45 KB every gameweek and reaches ~1.7 MB by May**, which is the 1.9 MB the original number was
+    measuring. ⭐ *An optimisation worth keeping is the one whose saving grows; this test now guards that
+    half and lets the flat half through.*
+
+    ⭐ Clean-sheet rates come from **fixtures** rather than goalkeeper rows for the same reason — identical
+    numbers club by club, 380 rows that never grow.
+    """
     from src import pipeline
     pipeline.publish_board(store, computed_at="2026-09-21T09:00:00+00:00")
 
     def _forbidden():
-        raise AssertionError("the board was published; history must not be read")
+        raise AssertionError("the board was published; the per-gameweek history must not be read")
 
-    monkeypatch.setattr(store, "get_history_by_code", _forbidden)
     monkeypatch.setattr(store, "get_gw_history_by_code", _forbidden)
     assert svc.transfers(TransfersRequest(player_ids=_squad(store), bank=2.0), store=store)["moves"]
 

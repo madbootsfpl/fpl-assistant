@@ -185,6 +185,7 @@ def suggest_transfers(
     owned, players, xp_by_id, *,
     bench_ids=(), bank: float = 0.0, limit: int = 5, max_per_club: int = MAX_PER_CLUB,
     xi_aware: bool = True, reported_out=None, window: int = TIE_NOISE_WINDOW, horizon_xp=None,
+    sell_doubt=None,
 ) -> list[dict]:
     """Rank the best single transfers for a squad (ADR-030/046).
 
@@ -212,6 +213,18 @@ def suggest_transfers(
     this ranking, and keeps one out of the incoming shortlist. Without it the ranking compares a replacement
     against points the outgoing player will never score, and a bench leaver moves the XI by nothing — so the
     single most urgent transfer in the squad never appears (ADR-156).
+
+    `sell_doubt` (id → pts/match, ADR-376) is **how much this player's xP is known to understate him**, and
+    a move is withheld when that doubt fully explains it. 🔴 It exists because the engine was advising
+    testers to sell Konsa — DEF #50 of 217 while his Arsenal teammate Gabriel is #3 on the same back line,
+    because his rate was earned at Aston Villa and `CLEAN_SHEET_WEIGHT` is 0. ⭐⭐ *We are not claiming to
+    know what he is worth; we are declining to advise a sale on a number we know is biased downward.*
+
+    ⚠️⚠️ **The doubt is NETTED against the incoming player's.** Crediting the outgoing defender and not his
+    replacement would compare a corrected player against an uncorrected one and freeze every defender sale
+    — ⭐ *a one-sided correction applied to one side of a comparison is a thumb on the scale, not a guard.*
+
+    Default `None` is **exactly today's behaviour**, so every caller that has not opted in is unchanged.
     """
     owned_ids = {p["id"] for p in owned}
     bench = set(bench_ids)
@@ -237,6 +250,12 @@ def suggest_transfers(
                     gain = round(after - base_xi, 1)
                 else:
                     gain = round(in_sum["xp"] - out_sum["xp"], 1)
+                if gain > 0 and sell_doubt:
+                    # Net doubt over the window `xp_by_id` covers: the outgoing player's unpriced value
+                    # minus the incoming player's, because both may be defenders behind a strong defence.
+                    net = (sell_doubt.get(out["id"], 0.0) - sell_doubt.get(c["id"], 0.0)) * window
+                    if gain <= net:
+                        continue                   # the move exists only because we under-rate him
                 if gain > 0:
                     pairs.append((gain, out, out_sum, c, in_sum))
 
@@ -353,6 +372,7 @@ def suggest_transfer_plan(
     owned, players, xp_by_id, *,
     bench_ids=(), bank: float = 0.0, count: int = 1, max_per_club: int = MAX_PER_CLUB,
     xi_aware: bool = True, reported_out=None, window: int = TIE_NOISE_WINDOW, horizon_xp=None,
+    sell_doubt=None,
 ) -> list[dict]:
     """A coordinated, greedy plan of up to `count` transfers (ADR-035).
 
@@ -365,7 +385,9 @@ def suggest_transfer_plan(
     `suggest_transfers` on the evolving state, so every single-transfer rule holds across the
     plan. Returns the ordered moves, each annotated with `bank_after`; stops early when no
     positive-gain move remains. `reported_out` threads through to every step (ADR-156), so a departing player
-    is worth zero on move 3 for the same reason he is on move 1.
+    is worth zero on move 3 for the same reason he is on move 1. ⭐ `sell_doubt` threads through for that
+    same reason (ADR-376): a sale we decline to advise on move 1 is one we decline to advise on move 3,
+    and a guard that only held for the first step would be bypassed by asking for two.
     """
     by_id = {p["id"]: p for p in players}
     owned = list(owned)
@@ -378,7 +400,7 @@ def suggest_transfer_plan(
         moves = suggest_transfers(
             owned, market, xp_by_id, bench_ids=bench_ids, bank=running_bank,
             limit=1, max_per_club=max_per_club, xi_aware=xi_aware, reported_out=reported_out,
-            window=window, horizon_xp=horizon_xp,
+            window=window, horizon_xp=horizon_xp, sell_doubt=sell_doubt,
         )
         if not moves:
             break
