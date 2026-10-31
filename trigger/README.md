@@ -30,19 +30,29 @@ this cron line, because the thing it depends on moves every week."* This supplie
 ⚠️ This token can start workflow runs in this repo. It **cannot** push code, read secrets, or touch any
 other repository.
 
-**2 — Give it to the worker** (the value never enters this repo or the shell history of a tool):
+**2 — Check the Cloudflare token can write Workers.** ⚠️ The one `scripts/release_web.sh` uses is a
+**Pages** token, and Workers is a separate scope — it fails with *"No access to the specified resource."* on
+both `secret put` and `deploy`. Edit it at **dash.cloudflare.com/profile/api-tokens** and add:
+
+- **Account → Workers Scripts → Edit**
+- **Account → Account Settings → Read** (wrangler resolves the account through it)
+
+⭐ *Edit* the existing token rather than minting a second: the value does not change, so nothing has to be
+re-pasted and `release_web.sh` keeps working.
+
+**3 — Deploy, then arm it. In that order:**
 
 ```bash
-cd trigger && npx --yes wrangler@4 secret put GITHUB_TOKEN
+cd trigger
+npx --yes wrangler@4 deploy                     # creates the worker — inert, no token yet
+npx --yes wrangler@4 secret put GITHUB_TOKEN    # paste the PAT
 ```
 
-**3 — Deploy:**
+⚠️ **Deploy first, because `secret put` needs the worker to exist.** Safe in that order precisely because
+the worker is inert without its secret: the cron starts ticking immediately and logs
+`no GITHUB_TOKEN — nothing dispatched` until step 3's paste lands.
 
-```bash
-cd trigger && npx --yes wrangler@4 deploy
-```
-
-Uses the same `CLOUDFLARE_API_TOKEN` as `scripts/release_web.sh`.
+⭐ Run both in a normal terminal, not through a tool — so the token never enters a transcript.
 
 ---
 
