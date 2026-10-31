@@ -143,7 +143,7 @@ fi
 # measurement cannot tell you the policy was not applied.*
 expiry=$(profile_expiry mobile/build/ios/iphoneos/Runner.app/embedded.mobileprovision)
 read -r verdict left iso <<<"$(expiry_verdict "$expiry")"
-pretty=$(date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "${iso:-}" "+%a %d %b, %H:%M UTC" 2>/dev/null || echo "${iso:-}")
+pretty=$(pretty_date "${iso:-}")
 echo
 case "$verdict" in
   critical)

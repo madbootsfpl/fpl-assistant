@@ -4,6 +4,13 @@
 **Status:** Accepted
 **Raised by:** the owner — *"noticed these emails showing CI failed, on checking they have happened for a while"*
 
+⚠️ **A blind spot found the hard way on 2026-10-30 ([ADR-379](./ADR-379-seventeen-minutes.md)):** this net
+**cannot catch a macOS/Linux difference**, because it runs on the developer's Mac and CI runs Linux. A shell
+helper using BSD `date -j` passed every changed test here and went red on the gate. ⭐⭐ *The blind spots
+listed below were enumerated from the categories that had already bitten us, not from first principles — so
+the list was complete about the past and silent about this.* Exposed surface: `scripts/**` and anything
+shelling out to platform tools. Python is not exposed, since CI runs the same interpreter.
+
 ---
 
 ## Context

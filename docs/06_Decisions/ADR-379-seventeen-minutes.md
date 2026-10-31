@@ -103,9 +103,32 @@ not applied* — which is exactly the failure it sat next to for seven months.
 needs two timestamps. ⚠️ *A rule tested by grepping for its own source text is not tested* — which is what
 the old file could only do.
 
-**7 deliberate defects, all caught:** purge decision inverted · default threshold set to 0 · alarm never
-fires on a dying build · unreadable date no longer reports `unknown` · stale profile deleted instead of set
-aside · closing line stops reading the artefact · purge moved after the build.
+### 🔴 And then CI went red, which is the third mistake in this ADR
+
+The first version parsed dates with **BSD `date -j -u -f`**. It passed the pre-push net and **failed CI** —
+the net runs on this **Mac**, CI runs on **Linux**, and `-j` does not exist there. Every date test returned
+`''`. ⭐⭐ *A NET THAT RUNS ON ONE PLATFORM CANNOT CATCH A DIFFERENCE BETWEEN TWO*, and
+[ADR-359](./ADR-359-a-net-not-a-gate.md) carefully lists what it cannot catch **without listing this** —
+its blind spots were enumerated from the categories that had bitten us, not from first principles.
+
+⚠️ The obvious patch was *"try BSD, fall back to GNU"*. **I could not verify the GNU branch on this
+machine:** there is no `gdate`, and a stub that merely hides `-j` still falls through to BSD, so the
+fallback **tested as broken** and would have shipped on faith. ⭐⭐ *A fallback you cannot exercise is a
+second guess, not a safety net* — and guessing at a platform is what broke it the first time.
+
+**So the dates are parsed in `python3` instead**, which this project already requires everywhere. One
+implementation, no dialects, **no untested branch**, and verifiable here. ⭐ *The fix for "it behaves
+differently on two platforms" is not a second path; it is one path that does not depend on the platform.*
+
+**9 deliberate defects, 8 caught** (re-run after the Python rewrite): purge decision inverted · default
+threshold set to 0 · alarm never fires on a dying build · `hours_left` sign flipped · epoch parser format
+wrong · stale profile deleted instead of set aside · closing line stops reading the artefact · purge moved
+after the build.
+
+⭐ The ninth — deleting `hours_left`'s `[ -n "$exp" ]` guard — **survives, and is an equivalent mutant
+rather than a hole**: `iso_epoch` already exits non-zero on an unparseable date, so the preceding
+`|| return 1` catches it first. The line is redundant insurance and is kept as such. ⚠️ *Counting an
+equivalent mutant as an uncaught one inflates the hole; counting it as caught inflates the coverage.*
 
 ⚠️ **Two of my own tests were wrong first and both are worth recording:**
 - The threshold mutant **survived**, because my tests passed `should_purge` a literal `48` and never
@@ -119,7 +142,8 @@ aside · closing line stops reading the artefact · purge moved after the build.
 
 **2 — Manual smoke test.** Run end to end against the phone with `IOS_PROFILE_MIN_HOURS=200` to force the
 purge path: profile set aside, Xcode reissued, app installed, and the report read **Fri 06 Nov, 19:59 UTC
-(167h)** from the new artefact. The app is on the device with a genuine week.
+(167h)** from the new artefact. Re-run after the Python rewrite and it reads **154h** — the countdown is
+live, which is the point. The app is on the device with a genuine week.
 
 **3 — Docs.** This ADR, index, PROJECT_STATUS, README counts.
 
@@ -140,6 +164,10 @@ congratulating itself.
   the case for paying, because the manual path has now failed twice in eight days (ADR-366, this).
 - ⚠️ Only `com.madboots.fpl` profiles are swept, matched on the profile `Name`. A future bundle id rename
   would silently stop the purge — and the closing line is what would catch it.
+- ⚠️ **The pre-push net's blind spot is now known and still unfixed:** it cannot see a macOS/Linux
+  difference, because it runs on one of them. Shell helpers are the exposed surface; Python is not, since
+  CI runs the same interpreter. ⭐ *Worth adding to ADR-359's list of what it cannot catch rather than
+  rediscovering.*
 
 ---
 

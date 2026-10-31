@@ -26,16 +26,40 @@ IOS_PROFILE_DIRS=(
 # reissue": that would turn an offline laptop from an inconvenience into a failed release.
 IOS_PROFILE_MIN_HOURS="${IOS_PROFILE_MIN_HOURS:-48}"
 
-iso_epoch() {   # $1 = 2026-11-06T19:48:46Z  ->  epoch seconds
-  # ⚠️ BSD `date` needs the format spelled out; GNU `date -d` is not available on a stock Mac.
-  date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "$1" "+%s" 2>/dev/null
+# ⚠️⚠️⚠️ **The dates are parsed in Python, not by `date`, and that is the second attempt.**
+#
+# The first version used BSD `date -j -u -f`. It passed the pre-push net on macOS and went **red on CI**,
+# which runs Linux, where `-j` does not exist — ⭐⭐ *a net that runs on one platform cannot catch a
+# difference between two*, and ADR-359 lists what it misses without listing this.
+#
+# The obvious patch was "try BSD, fall back to GNU". ⚠️ **I could not verify the GNU branch on this
+# machine** — there is no `gdate` here, and a stub that only hides `-j` still falls through to BSD, so the
+# fallback tested as broken and would have been pushed on faith. ⭐⭐ *A fallback you cannot exercise is a
+# second guess, not a safety net* — and guessing at a platform is exactly what broke it the first time.
+#
+# ⭐ So: one implementation, on the interpreter this project already requires everywhere. Verifiable here,
+# identical on CI, no dialects. Costs ~30 ms a call and is called a handful of times per release.
+#
+# Degradation is deliberate and already handled: with no `python3` these print nothing, `should_purge`
+# refuses to touch anything and `expiry_verdict` says `unknown`.
+_PY_EPOCH='import sys,datetime as d;print(int(d.datetime.strptime(sys.argv[1],"%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=d.timezone.utc).timestamp()))'
+_PY_PRETTY='import sys,datetime as d;print(d.datetime.strptime(sys.argv[1],"%Y-%m-%dT%H:%M:%SZ").strftime("%a %d %b, %H:%M UTC"))'
+
+iso_epoch() {   # $1 = 2026-11-06T19:48:46Z  ->  epoch seconds (empty if unparseable)
+  python3 -c "$_PY_EPOCH" "$1" 2>/dev/null
+}
+
+pretty_date() { # $1 = ISO expiry -> "Fri 06 Nov, 19:48 UTC", or the raw string if it will not parse
+  python3 -c "$_PY_PRETTY" "$1" 2>/dev/null || echo "$1"
 }
 
 hours_left() {  # $1 = ISO expiry, $2 = optional "now" epoch (for tests)  -> whole hours, may be negative
   local exp now
   exp=$(iso_epoch "$1") || return 1
   [ -n "$exp" ] || return 1
-  now="${2:-$(date -u "+%s")}"
+  now="${2:-}"
+  [ -n "$now" ] || now=$(python3 -c 'import time;print(int(time.time()))' 2>/dev/null)
+  [ -n "$now" ] || return 1
   echo $(( (exp - now) / 3600 ))
 }
 
