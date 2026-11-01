@@ -43,6 +43,12 @@ _MAP_FIELDS = frozenset({
     "fixtures",       # club code → that club's run
     "kits",           # club code → kit colours
     "prices",         # player id → price
+    #: ⚠️ `explanation.transfers` — player id → why that move was suggested. Added 2026-11-01 after it went
+    #: red on nothing but a new gameweek: the keys went from `286` to `93` because a different transfer was
+    #: top of the list. ⭐ *Exactly the fault this set already existed for, in the one field nobody had hit
+    #: yet.* Safe to name here even though `transfers` is also a **list** of moves at the top level and an
+    #: **int** in `league.managers[]` — `_MAP_FIELDS` is consulted only for dicts.
+    "transfers",
 })
 
 #: ⭐ The sentinel that stands in for "any key". Distinct from a real key, so a record can never match a map.
@@ -108,10 +114,20 @@ def incompatible(sample, live, path=""):
         return [bad for k in sorted(sample)
                 for bad in incompatible(sample[k], live[k], f"{path}.{k}")]
     if isinstance(sample, list) and isinstance(live, list):
-        if bool(sample) != bool(live):
-            return [(here, f"one is empty: sample={sample}, response={live}")]
+        # ⚠️⚠️ **There was an emptiness check here and it was DEAD CODE.** It read
+        # `if bool(sample) != bool(live)`, but `shape` never returns `[]` for a list — an empty one becomes
+        # `["empty"]`, which is truthy. So the branch could not fire, the comparison fell through to the
+        # scalar test below, and `["empty"]` vs `["str"]` was reported as *"type changed"*. ⭐⭐ *A guard
+        # that cannot fire still reads like one, which is why the bug it was meant to catch hid behind it.*
         return incompatible(sample[0], live[0], f"{path}[]") if sample else []
-    if sample == live or "null" in (sample, live):    # ⭐ nullable — see above
+    # ⭐ Nullable — see above. ⭐⭐ And `empty` for the same reason, which is the stronger argument of the
+    # two: a list that holds nothing in the seed and something live is `List<X>` in Dart **either way**, so
+    # emptiness is no more knowable from one dataset than nullability is. `risks` is empty for a captain with
+    # no flags and populated for one with them; that is data, not contract.
+    #
+    # ⚠️ Same cost, stated the same way: a list that becomes **permanently** empty is no longer caught here.
+    # A key appearing or vanishing, or a type changing, still is — and those are what break a Dart model.
+    if sample == live or "null" in (sample, live) or "empty" in (sample, live):
         return []
     return [(here, f"type changed: sample={sample!r}, response={live!r}")]
 
@@ -261,11 +277,35 @@ def test_the_comment_quotes_the_size_the_payload_actually_is():
         # ⭐ The map rule drops KEYS, never the value type — `Map<String,int>` → `Map<String,String>` is
         # exactly the change a Dart model cannot survive.
         ("a map's value is retyped", {"club_counts": {"ARS": 1}}, {"club_counts": {"BOU": "x"}}),
-        ("a list empties", {"a": [{"x": 1}]}, {"a": []}),
+        # ⭐⭐ **This replaces `("a list empties", …)`, which was moved to the tolerated table below.**
+        # The protection that actually matters is kept and sharpened: when BOTH sides hold an element, a
+        # change of element type is caught. `List<String>` → `List<int>` is what a Dart model cannot survive;
+        # *"the seed's captain had no risks this week"* is not.
+        ("a list's element is retyped", {"a": ["x"]}, {"a": [1]}),
+        ("a list's element loses a key", {"a": [{"x": 1, "y": 2}]}, {"a": [{"x": 1}]}),
     ],
 )
 def test_real_drift_is_still_caught(what, sample, response):
     assert incompatible(shape(sample), shape(response)), f"{what} was not caught"
+
+
+def test_an_id_keyed_explanation_map_tolerates_new_ids_but_not_a_new_value_type():
+    """⭐ `explanation.transfers` is keyed by player id, so which id appears is data (ADR-375's gate ran on a
+    week where the top move changed from 286 to 93, and that alone went red). The **value** type is still
+    structure — an explanation that stopped being an object is a Dart break."""
+    assert not incompatible(shape({"transfers": {"286": {"why": "x"}}}),
+                            shape({"transfers": {"93": {"why": "y"}}}))
+    assert incompatible(shape({"transfers": {"286": {"why": "x"}}}),
+                        shape({"transfers": {"93": "a string now"}}))
+
+
+def test_a_list_of_transfers_is_not_treated_as_a_map():
+    """⚠️ `transfers` is a **list** of moves at the top level of `gameweek-plan` and an **int** in
+    `league.managers[]`. ⭐ Naming a field in `_MAP_FIELDS` must not reach those: the rule is consulted only
+    for dicts, and this is the test that says so."""
+    assert incompatible(shape({"transfers": [{"out": {"id": 1}}]}),
+                        shape({"transfers": [{"out": {"id": "1"}}]}))
+    assert not incompatible(shape({"transfers": 4}), shape({"transfers": 9}))
 
 
 def test_a_map_can_never_match_a_record():
@@ -283,6 +323,24 @@ def test_a_map_can_never_match_a_record():
         # ⚠️⚠️ The two the old `==` could not tolerate, and the reason CI could not pass with only the seed.
         ("a nullable field that is null in one dataset", {"chance": 7}, {"chance": None}),
         ("a map whose keys differ between datasets", {"kits": {"ARS": 1}}, {"kits": {"BOU": 2}}),
+        # ⚠️⚠️ **Added 2026-11-01, and this is the SECOND loosening of this guard** — the warning above
+        # about over-tolerance is addressed to exactly this edit, so the trade is written down rather than
+        # assumed. `.explanation.captain.risks` is `[]` for a captain with no flags and populated for one
+        # with them, so CI went red on nothing but a new gameweek picking a different captain.
+        #
+        # ⭐⭐ An empty list means **the element type is unobservable in that dataset** — the same thing
+        # `null` means for a scalar, and the file already accepts that argument. A list that is empty here
+        # and populated there is `List<X>` in Dart either way.
+        #
+        # ⭐ Symmetric on purpose. An asymmetric rule ("filling is fine, emptying is drift") would have been
+        # green today and red the first time a sample was regenerated from the live cache — ⚠️ *a guard
+        # whose correctness depends on which dataset was richer when the sample was taken is the fault this
+        # whole file exists to stop.*
+        #
+        # ⚠️ **The cost, stated:** a list that becomes *permanently* empty is no longer caught here. A field
+        # vanishing, a scalar retyping, and an element retyping when both sides have one all still are.
+        ("a list empty in the sample and populated in the response", {"a": []}, {"a": [{"x": 1}]}),
+        ("a list populated in the sample and empty in the response", {"a": [{"x": 1}]}, {"a": []}),
     ],
 )
 def test_dataset_noise_is_tolerated(what, sample, response):
