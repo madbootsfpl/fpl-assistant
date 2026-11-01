@@ -2,8 +2,10 @@
 
 **Decision ID:** ADR-375
 **Date:** 2026-10-30
-**Status:** 📋 **Gate — measured enough to propose, not built.** A baseline error in `clean_sheet_delta`,
-found while answering a tester complaint. **Nothing in `decision_xp` changes until this is agreed.**
+**Status:** ❌ **DECLINED at the gate, 2026-11-01. `CLEAN_SHEET_WEIGHT` stays 0.** All three baselines
+decline monotonically on DEF/GK; the personal baseline is indistinguishable from today's to the fourth
+decimal. 🔴 **The mechanism this ADR proposed is falsified** — see *The gate, run* below. Originally:
+📋 *Gate — measured enough to propose, not built.*
 **Superseded By / Replaces:** Reopens [ADR-188](./ADR-188-a-defender-plays-for-a-team.md) /
 [ADR-195](./ADR-195-team-defence-is-xgc-not-clean-sheets.md) with a **correction to their baseline**, not a
 re-run — [ADR-370](./ADR-370-option-d-was-already-built-and-it-declines.md) declined the weight and this
@@ -118,7 +120,63 @@ gate.*
 
 ---
 
-### 📋 What is proposed
+### ❌ The gate, run — and the premise was wrong
+
+Swept `CLEAN_SHEET_WEIGHT` 0 → 1.0 on the three baselines, scored **on DEF/GK** over 8 gameweeks
+(ADR-190's rule), reusing `spikes/192-defender-only-calibration`'s harness — the one ADR-370 was argued on.
+**Weight-0 baseline: ρ 0.6131, MAE 1.30, hit@10 0.20, n 286, 1 SE 0.0592.**
+
+| weight | control ρ | **A personal** ρ | **B demeaned** ρ |
+|---|---|---|---|
+| 0.05 | 0.6129 | 0.6128 | 0.6130 |
+| 0.10 | 0.6119 | 0.6122 | 0.6120 |
+| 0.25 | 0.6082 | 0.6071 | 0.6070 |
+| 0.50 | 0.6053 | 0.6049 | 0.6051 |
+| 1.00 | 0.5978 | 0.5991 | 0.5990 |
+| **best vs w=0** | **−0.00 SE** | **−0.00 SE** | **−0.00 SE** |
+| worst | −0.26 SE | −0.24 SE | −0.24 SE |
+
+**No variant produces a gain at any weight.** Every column declines monotonically, and MAE rises with it.
+
+⭐⭐ **A ≈ B ≈ control, to the fourth decimal. That is the finding, and it falsifies this ADR's own
+mechanism.** The two comparisons were pre-registered and both come back negative:
+
+- **B ≈ A** → the unexplained **+0.135 pts/match level shift was never doing anything**, exactly as
+  predicted for a rank-based statistic. One open question closed.
+- **A ≈ control** → 🔴 **the personal baseline changes nothing measurable.** The double-count described
+  above is real arithmetic — every Arsenal defender genuinely does receive the identical credit, and White
+  genuinely needs a third of what Konsa needs — and **correcting it carries no ranking information.**
+
+This ADR proposed the league baseline as *"a candidate explanation for ADR-370's decline"*, and was careful
+to call it a mechanism rather than a proof. ⭐ *It was a good story and the data declined it.* The
+pre-registered third branch is the one that fired: *"if both decline, the baseline was not ADR-370's problem
+and this whole line closes with it."*
+
+⚠️ **hit@10 is the flattering secondary and is not used.** It reaches **0.23** at control w=1.00 and at A
+w=0.30 against a 0.20 baseline — while ρ falls at both. ADR-190 declined a term on exactly this shape, and
+ADR-204 recorded why the discipline has to bind when the secondary is the flattering one: ⭐ *a rule that
+only binds when it agrees with you is not a rule.*
+
+### 🔴 What this does to ADR-376, which is already shipped
+
+[ADR-376](./ADR-376-not-on-a-number-we-know-is-biased.md)'s sell-side guard withholds a defender's sale
+using `unpriced_defence` — **this correction**. Its own limits section pre-registered the consequence:
+
+> *"It acts on an ungated number. The three properties above are what make that defensible; if ADR-375
+> declines, this guard's premise weakens and it should be re-argued rather than quietly kept."*
+
+**That is now triggered and it is the owner's call.** The honest framing of the choice:
+
+- The guard's *mechanism* is real and demonstrable — the double-count exists in the arithmetic.
+- The guard's *predictive value is now measured at approximately zero*. Correcting the bias does not improve
+  the DEF/GK ranking at any weight.
+- ⚠️ So keeping it is a **credibility policy, not a model claim**, and it must be labelled as one. It will
+  withhold some sales that were correct.
+- ⭐⭐ *"The correction does not improve ρ" is not the same claim as "the number is not biased"* — Konsa is
+  still projected at 2.98 while playing at 3.84 — **but rescuing a declined gate with that distinction is
+  exactly the motivated reasoning §B0 exists to stop.** It deserves saying out loud rather than relying on.
+
+### 📋 What was proposed
 
 1. Add `league_cs_by_season` + `historical_cs_edge` to `src/analytics/cleansheet.py` (pure, from data already
    stored: `clean_sheets`, `starts`, `season_name`).

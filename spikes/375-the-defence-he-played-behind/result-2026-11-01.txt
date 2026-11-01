@@ -1,0 +1,41 @@
+DEF/GK with a personal baseline: 187   mean edge -0.0337 per start   (= +0.135 pts/match of level shift in A)
+league clean-sheet rate per season: 2022/23:0.297  2023/24:0.244  2024/25:0.248  2025/26:0.280
+
+scored on DEF/GK over 8 gameweeks — the population the term applies to (ADR-190)
+weight-0 baseline: ρ 0.6131  MAE 1.30  hit@10 0.20  n 286  1 SE 0.0592
+
+  baseline    weight        ρ    MAE  hit@10             vs w=0
+  control       0.05   0.6129   1.30    0.20    -0.0002 =  -0.00 SE
+  control       0.10   0.6119   1.31    0.20    -0.0012 =  -0.02 SE
+  control       0.15   0.6103   1.31    0.19    -0.0028 =  -0.05 SE
+  control       0.20   0.6087   1.31    0.19    -0.0044 =  -0.07 SE
+  control       0.25   0.6082   1.31    0.20    -0.0049 =  -0.08 SE
+  control       0.30   0.6080   1.31    0.19    -0.0051 =  -0.09 SE
+  control       0.40   0.6060   1.31    0.20    -0.0071 =  -0.12 SE
+  control       0.50   0.6053   1.31    0.19    -0.0078 =  -0.13 SE
+  control       0.75   0.6021   1.32    0.21    -0.0110 =  -0.19 SE
+  control       1.00   0.5978   1.32    0.23    -0.0152 =  -0.26 SE
+
+  A personal    0.05   0.6128   1.30    0.20    -0.0003 =  -0.00 SE
+  A personal    0.10   0.6122   1.30    0.21    -0.0009 =  -0.02 SE
+  A personal    0.15   0.6100   1.31    0.21    -0.0031 =  -0.05 SE
+  A personal    0.20   0.6076   1.31    0.21    -0.0055 =  -0.09 SE
+  A personal    0.25   0.6071   1.31    0.21    -0.0060 =  -0.10 SE
+  A personal    0.30   0.6070   1.31    0.23    -0.0061 =  -0.10 SE
+  A personal    0.40   0.6051   1.31    0.20    -0.0080 =  -0.14 SE
+  A personal    0.50   0.6049   1.31    0.19    -0.0082 =  -0.14 SE
+  A personal    0.75   0.6021   1.32    0.20    -0.0110 =  -0.19 SE
+  A personal    1.00   0.5991   1.33    0.19    -0.0140 =  -0.24 SE
+
+  B demeaned    0.05   0.6130   1.30    0.20    -0.0001 =  -0.00 SE
+  B demeaned    0.10   0.6120   1.30    0.21    -0.0011 =  -0.02 SE
+  B demeaned    0.15   0.6103   1.31    0.21    -0.0027 =  -0.05 SE
+  B demeaned    0.20   0.6076   1.31    0.20    -0.0055 =  -0.09 SE
+  B demeaned    0.25   0.6070   1.31    0.20    -0.0061 =  -0.10 SE
+  B demeaned    0.30   0.6068   1.31    0.21    -0.0062 =  -0.11 SE
+  B demeaned    0.40   0.6057   1.31    0.20    -0.0074 =  -0.12 SE
+  B demeaned    0.50   0.6051   1.31    0.21    -0.0080 =  -0.14 SE
+  B demeaned    0.75   0.6017   1.31    0.19    -0.0114 =  -0.19 SE
+  B demeaned    1.00   0.5990   1.31    0.19    -0.0141 =  -0.24 SE
+
+§B0: +1 SE on ρ across ≥2 ADJACENT weights, with MAE and hit@10 not falling.

@@ -2,8 +2,11 @@
 
 **Decision ID:** ADR-376
 **Date:** 2026-10-30
-**Status:** ✅ **Accepted and built.** The transfer engine no longer advises selling a DEF/GK when the
-defence it fails to price fully explains the move. **xP is unchanged** — this is a flag, not a correction.
+**Status:** ✅ **Built and live** — but 🔴 **its premise was declined on 2026-11-01**
+([ADR-375](./ADR-375-the-defence-he-played-behind.md)): correcting the baseline this guard reads carries
+**no measurable ranking value** on DEF/GK at any weight. The limits section below pre-registered exactly
+this, so the guard now needs **re-arguing as a credibility policy rather than a model claim** — owner's
+call. It remains live meanwhile. **xP is unchanged** — this is a flag, not a correction.
 **Superseded By / Replaces:** The fast half of [ADR-375](./ADR-375-the-defence-he-played-behind.md), shipped
 without waiting for it. Follows [ADR-138](./ADR-138-value-frontier.md)'s *flag, not a correction* pattern.
 Narrows [ADR-218](./ADR-218-read-the-board-instead-of-rebuilding-it.md)'s read optimisation, deliberately.
@@ -122,8 +125,13 @@ synthetic Konsa squad on the live GW8 board at both horizons.
 argument, touches no xP, and is off by default for every surface not opted in.
 
 **Costs / limits:**
-- ⚠️ **It acts on an ungated number.** The three properties above are what make that defensible; if ADR-375
-  declines, this guard's premise weakens and it should be re-argued rather than quietly kept.
+- 🔴 **It acts on an ungated number — and the gate has since declined it** (ADR-375, 2026-11-01). The three
+  properties above are what make acting on it defensible at all; what they cannot supply is value the
+  measurement says is not there. ⭐⭐ *The double-count is real arithmetic and correcting it is worth nothing
+  to the ranking — both of those are now measured, and they do not resolve each other.* Verified live on
+  2026-11-01: the guard does withhold Konsa's sale on the app, by a margin of **0.31 points over five
+  gameweeks** (gain 7.5 against net doubt 7.19 on a local recompute) — ⚠️ *thin enough that the suggestion
+  returns whenever a slightly better replacement appears.*
 - ⚠️ **Silent.** A withheld move simply does not appear. The player's `defence_unpriced` is not yet surfaced,
   so nothing *tells* the reader why — ⭐ and ADR-138's pattern is a flag that **says** something. This is half
   of it.
