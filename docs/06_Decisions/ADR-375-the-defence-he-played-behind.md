@@ -165,7 +165,9 @@ using `unpriced_defence` — **this correction**. Its own limits section pre-reg
 > *"It acts on an ungated number. The three properties above are what make that defensible; if ADR-375
 > declines, this guard's premise weakens and it should be re-argued rather than quietly kept."*
 
-**That is now triggered and it is the owner's call.** The honest framing of the choice:
+**That was triggered, held on 2026-11-02, and the decision is to KEEP the guard** — explicitly as a
+credibility policy rather than a model claim ([ADR-376](./ADR-376-not-on-a-number-we-know-is-biased.md) §
+*The re-argument*). The framing the decision was taken on:
 
 - The guard's *mechanism* is real and demonstrable — the double-count exists in the arithmetic.
 - The guard's *predictive value is now measured at approximately zero*. Correcting the bias does not improve

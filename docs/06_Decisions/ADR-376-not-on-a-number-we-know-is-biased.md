@@ -2,11 +2,12 @@
 
 **Decision ID:** ADR-376
 **Date:** 2026-10-30
-**Status:** ✅ **Built and live** — but 🔴 **its premise was declined on 2026-11-01**
+**Status:** ✅ **Built, live, and KEPT by the owner on 2026-11-02 as an explicit credibility policy** —
+🔴 **not as a model claim.** Its premise was declined on 2026-11-01
 ([ADR-375](./ADR-375-the-defence-he-played-behind.md)): correcting the baseline this guard reads carries
-**no measurable ranking value** on DEF/GK at any weight. The limits section below pre-registered exactly
-this, so the guard now needs **re-arguing as a credibility policy rather than a model claim** — owner's
-call. It remains live meanwhile. **xP is unchanged** — this is a flag, not a correction.
+**no measurable ranking value** on DEF/GK at any weight. The limits section below pre-registered the
+re-argument; it was held and the decision is *keep*. See **The re-argument** below for what that commits us
+to. **xP is unchanged** — this is a flag, not a correction.
 **Superseded By / Replaces:** The fast half of [ADR-375](./ADR-375-the-defence-he-played-behind.md), shipped
 without waiting for it. Follows [ADR-138](./ADR-138-value-frontier.md)'s *flag, not a correction* pattern.
 Narrows [ADR-218](./ADR-218-read-the-board-instead-of-rebuilding-it.md)'s read optimisation, deliberately.
@@ -118,6 +119,38 @@ synthetic Konsa squad on the live GW8 board at both horizons.
 **3 — Docs.** This ADR, ADR-375, ADR-218's test rationale, index, PROJECT_STATUS.
 
 ---
+
+### ⚖️ The re-argument, held 2026-11-02 — kept, and on what basis
+
+ADR-375's gate declined the correction this guard reads. The limits section below had pre-registered that
+the guard would then need re-arguing *"rather than quietly kept"*. It was, and the owner kept it.
+
+⭐⭐ **WHAT THAT DOES AND DOES NOT CLAIM.** Two things are now measured and **neither resolves the other**:
+
+| | |
+|---|---|
+| the double-count is **real** | every Arsenal defender receives the identical credit; White needs a third of what Konsa needs. Arithmetic, demonstrable, not in dispute. |
+| correcting it is **worth nothing** | ρ on DEF/GK is flat-to-worse at every weight, on both the personal and the demeaned baseline (ADR-375). |
+
+So the guard is kept on the ground ADR-376 was written on in the first place — ⭐ *the damage was never the
+wrong number, it was acting on a number we already know is biased* — and **not** on any claim that it
+predicts better. It does not.
+
+**What keeping it commits us to, stated so it is not discovered later:**
+- ⚠️ **It withholds some sales that were correct.** That is the price of the policy, not a bug in it.
+- ⚠️ **The margin is thin.** Measured on the live app: Konsa's sale is withheld by **0.31 points over five
+  gameweeks** (gain 7.5 against net doubt 7.19 on a local recompute). The suggestion returns whenever a
+  slightly better replacement appears, so testers will see it come and go.
+- 🔴 **`unpriced_defence` must not be promoted into `decision_xp` on the strength of this decision.** Its
+  docstring now says so in the module, because a future reader meeting the words *"points per match his xP
+  is understating him by"* would reasonably assume they had been earned.
+- ⚠️ The guard remains **silent** and `ask`/Streamlit remain **unwired** — both below, both unchanged by
+  this decision, and the first now matters more: ⭐ *a policy that withholds advice without saying so is
+  harder to defend than a model that is simply wrong.*
+
+⭐ **Re-open this if either measured fact moves.** If a later gate finds the correction does carry value, the
+guard stops being a policy and becomes a model term. If the double-count is ever shown not to exist, the
+policy loses its ground entirely.
 
 ### 📊 Consequences
 

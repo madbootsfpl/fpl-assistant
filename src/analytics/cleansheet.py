@@ -185,6 +185,20 @@ def unpriced_defence(player, rows, team_rate, league_now, league_by_season) -> f
     engine advising a sale on a number it knows is biased *downward* (ADR-376) — never to talk anyone into a
     purchase. An ungated correction is safe to act on only where being wrong about it costs nothing, and
     declining to give advice is that place.
+
+    🔴🔴 **DO NOT PROMOTE THIS INTO `decision_xp` ON THE STRENGTH OF THIS FUNCTION.** ADR-375 gated exactly
+    this correction on 2026-11-01 and it **DECLINED**: swept 0 → 1.0 on DEF/GK, the personal baseline is
+    indistinguishable from the league one to the fourth decimal, and every variant makes ρ *worse*
+    monotonically. ⚠️ So "understating" above describes **arithmetic, not predictive value** — the
+    double-count is real (every Arsenal defender gets identical credit; White needs a third of what Konsa
+    needs) and correcting it is worth nothing to the ranking. ⭐⭐ *Those two facts are both measured and
+    neither resolves the other.*
+
+    ⭐ The owner chose on 2026-11-02 to **keep** the sell-side guard anyway, as an explicit **credibility
+    policy**: the engine should not advise selling a player on a number whose bias it can demonstrate, even
+    though removing the bias predicts no better. ⚠️ That is a product decision and is labelled as one here
+    so the next reader does not mistake it for a model result. The known price: it withholds some sales that
+    were correct, on a margin measured at **0.31 points over five gameweeks** for Konsa himself.
     """
     if _field(player, "position") not in CLEAN_SHEET_POSITIONS:
         return 0.0
