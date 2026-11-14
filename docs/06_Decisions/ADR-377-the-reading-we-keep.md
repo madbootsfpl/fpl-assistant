@@ -156,6 +156,19 @@ instrument working: it says this local reading is 121 h out and therefore worthl
 
 ---
 
+### ⚠️ This ADR's own measurement has to be re-queried now (2026-11-14)
+
+The coverage figures above came from `gh run list --limit 100`, which at the time spanned 17 days. Since
+[ADR-378](./ADR-378-the-tick-comes-from-outside.md) the pipeline runs **148 times a day**, so:
+
+- `--limit 100` now covers about **16 hours**, and the default `--limit 20` about **three**.
+- `gh api --paginate` caps at **1000** and **silently truncates** — a request for runs since 2026-10-31
+  came back starting 2026-11-07, with no error. ⭐ *It answered a different question and looked the same
+  doing it.*
+
+Re-run this measurement **per calendar day**, date-bounded, never by limit. ⚠️ *A measurement whose range
+shrinks when the thing it measures speeds up will keep reporting the window it can still see.*
+
 ### 📊 Consequences
 
 **Good:** the log's central promise is now enforced rather than hoped for, and its usability is visible every

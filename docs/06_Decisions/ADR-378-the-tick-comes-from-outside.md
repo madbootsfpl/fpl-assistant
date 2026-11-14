@@ -2,9 +2,10 @@
 
 **Decision ID:** ADR-378
 **Date:** 2026-10-30
-**Status:** ✅ **Accepted and built** — a Cloudflare Worker cron trigger calls `workflow_dispatch` every
-**10 minutes**; GitHub's `schedule:` is kept as a **backstop**. ⏳ **Unverified by design:** Cloudflare's
-cron is also best effort, and the measurement that decides this is two deadlines away.
+**Status:** ✅ **Accepted, built, and VERIFIED on 2026-11-14.** A Cloudflare Worker cron trigger calls
+`workflow_dispatch` every **10 minutes**; GitHub's `schedule:` is kept as a **backstop**. The
+pre-registered *"delete this if coverage has not moved"* condition is **not met** — median gap **234 min →
+10.0 min**, and `cadence()`'s promised *"four chances in the last hour"* was met with **six**. Kept.
 **Superseded By / Replaces:** Closes the cadence defect [ADR-377](./ADR-377-the-reading-we-keep.md) left
 open and quantified. Makes `src/pipeline.py`'s `cadence()` policy reachable for the first time since
 [ADR-211](./ADR-211-the-pipeline-runs-without-you.md).
@@ -118,6 +119,65 @@ both triggers present. ⚠️ **Not yet deployed** — it needs a token only the
 `schedule:` as the cadence (ADR-294's lesson), index, PROJECT_STATUS, README counts.
 
 ---
+
+### ✅ The verification, run 2026-11-14
+
+This ADR shipped labelled **unverified by design**, because *"assuming a platform meets its declared cadence
+is the exact mistake that produced this ADR"*. The pre-registered test was ADR-377's coverage measurement,
+re-run against the **26%** baseline, with the instruction: **delete this rather than keep it as decoration**
+if nothing moved.
+
+**1 — The mechanism.** 1000 runs over 162 hours (2026-11-07 → 11-14):
+
+| | before (ADR-377, 10-13 → 10-30) | after |
+|---|---|---|
+| median gap | **234 min** (3.9 h) | **10.0 min** |
+| mean gap | 246 min | 9.8 min |
+| max gap | **450 min** (7.5 h) | **10.1 min** |
+| gaps ≤ 11 min | — | **999 / 999 (100%)** |
+| runs/day | ~6 | **148** |
+
+⭐⭐ **A 23× improvement in median cadence, and a max gap of 10.1 minutes across a full week.** Cloudflare's
+cron did not drift once. ⚠️ Which is a measurement, not a reprieve — it is checked here precisely because it
+was not assumed.
+
+**2 — The deadline that mattered.** GW10, 2026-11-06 18:30Z:
+
+| | |
+|---|---|
+| last reading before the deadline | **18:20:26Z — 9.6 minutes out** |
+| readings inside the final hour | **6** |
+
+⭐⭐ **`cadence()` has promised *"four chances in the last hour"* since ADR-210 and had never once delivered
+them.** The baseline was GW7 at 0.56 h and GW8 at **4.93 h** — a 4.4-hour swing on an accumulating counter.
+
+🔴 **n = 1, and that is stated rather than glossed.** Only GW10 has passed since the trigger went live
+(2026-10-31 17:21Z); GW11 falls on **2026-11-21** after an international break. One deadline cannot
+distinguish a working trigger from a lucky one — ⭐ *which is why the mechanism was measured instead.* The
+cadence sample is 1000 runs, and deadline coverage is its arithmetic consequence: at a 10-minute tick, six
+readings inside any given hour is not a coin toss.
+
+**3 — The backstop still fires.** 24 of the 1000 runs came from GitHub's `schedule:` — roughly 3.5/day
+against an hourly declaration, which is the deprioritisation that made this ADR necessary and exactly why
+that line is kept rather than deleted.
+
+**4 — Reliability.** 995/1000 succeeded. Five did not: three `startup_failure` and two `failure`, each in a
+consecutive block (11-09 and 11-11), logs since expired. **0.5%**, and ⭐ *a failed tick now costs ten
+minutes instead of four hours* — the cadence fixes the blast radius as well as the coverage.
+
+### ⚠️ The instrument hit its own ceiling, as this ADR predicted
+
+This ADR warned that *"the instrument that found this will need its query adjusted once the fix lands"*. It
+did, and the adjustment was not optional:
+
+- `gh run list` defaults to **20** runs — about **three hours** at the new rate.
+- `gh api --paginate` caps at **1000**, which silently returned a window starting 2026-11-07 when the
+  request asked for 2026-10-31. ⚠️ **It did not error; it just answered a different question.** GW10 was
+  outside it, and was measured with a separate single-day query.
+
+⭐ *A measurement whose range silently shrank when the thing it measures got faster is the same class of
+fault as the cadence itself* — a declared capability that quietly stopped matching reality. Any re-run of
+this needs a **date-bounded, per-day** query, not a limit.
 
 ### 📊 Consequences
 
