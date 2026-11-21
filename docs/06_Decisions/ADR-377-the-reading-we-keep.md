@@ -102,6 +102,13 @@ week-to-week **difference in ownership** is usable from the data we already hold
 ⭐⭐ **SO THE SENTIMENT WORK DOES NOT HAVE TO WAIT FOR THE CADENCE FIX.** The phase defect was the reason to
 think it did; it only afflicts one of the two columns.
 
+✅ **Update 2026-11-21: the cadence fix landed and the flow half is unblocking too.**
+[ADR-378](./ADR-378-the-tick-comes-from-outside.md)'s trigger put the last pre-deadline reading at **9.6
+minutes out on both GW10 and GW11** — against a baseline that swung **33.6 → 296 minutes** between
+consecutive gameweeks. ⭐ *Phase stability, not phase proximity, is what this table needed*: two readings
+taken at the same point in the cycle are comparable with each other, which is the property ADR-190's
+attempted re-measurement could not reconstruct. ⚠️ Two is not a series; it is the first two.
+
 ### 📊 The crowd, used as a validation set rather than an input
 
 It cannot yet be backtested as a *feature* (too few phase-comparable readings). It can be used for free as a

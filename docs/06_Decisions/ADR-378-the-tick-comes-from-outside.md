@@ -151,11 +151,29 @@ was not assumed.
 ⭐⭐ **`cadence()` has promised *"four chances in the last hour"* since ADR-210 and had never once delivered
 them.** The baseline was GW7 at 0.56 h and GW8 at **4.93 h** — a 4.4-hour swing on an accumulating counter.
 
-🔴 **n = 1, and that is stated rather than glossed.** Only GW10 has passed since the trigger went live
-(2026-10-31 17:21Z); GW11 falls on **2026-11-21** after an international break. One deadline cannot
-distinguish a working trigger from a lucky one — ⭐ *which is why the mechanism was measured instead.* The
-cadence sample is 1000 runs, and deadline coverage is its arithmetic consequence: at a 10-minute tick, six
-readings inside any given hour is not a coin toss.
+🔴 **n = 1 when this was first written, and that was stated rather than glossed** — only GW10 had passed
+since the trigger went live (2026-10-31 17:21Z). One deadline cannot distinguish a working trigger from a
+lucky one, ⭐ *which is why the mechanism was measured instead*: the cadence sample is 1000 runs, and
+deadline coverage is its arithmetic consequence.
+
+✅ **GW11 (2026-11-21 11:00Z) makes it n = 2, and adds the finding that matters more than coverage:**
+
+| | GW7 | GW8 | **GW10** | **GW11** |
+|---|---|---|---|---|
+| last reading before the deadline | 33.6 min | **296 min** | **9.6 min** | **9.6 min** |
+| inside the final hour | yes | **no** | yes | yes |
+| readings in the final hour | — | — | **6** | **6** |
+
+⭐⭐ **THE PHASE IS NOW REPEATABLE TO THE MINUTE — 9.6 AND 9.6 — AND THAT, NOT THE COVERAGE, IS WHAT
+ADR-210's TABLE WAS BUILT FOR.** Its whole premise is that an accumulating counter read 0.6 h out and one
+read 4.9 h out *"are not the same evidence"*; the baseline swung **33.6 → 296 minutes** between consecutive
+gameweeks, and now it does not swing at all. ⭐ *Being near the deadline makes a reading good; being near it
+by the same margin every week makes a series.*
+
+That is what unblocks the **flow** half of the sentiment work (ADR-377 left only the stock usable). Two
+comparable readings are not yet a series — but they are the first two.
+
+**And today's run quality:** 71 runs, median gap **10.0 min**, max **10.0 min**, **zero** non-success.
 
 **3 — The backstop still fires.** 24 of the 1000 runs came from GitHub's `schedule:` — roughly 3.5/day
 against an hourly declaration, which is the deprioritisation that made this ADR necessary and exactly why
