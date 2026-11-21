@@ -233,11 +233,27 @@ def team_cs_from_fixtures(fixtures) -> dict:
     return {side: kept / played for side, (kept, played) in acc.items() if played}
 
 
-def unpriced_defence_by_id(players, history_by_code, fixtures) -> dict:
+def unpriced_defence_by_id(players, history_by_code, fixtures, minutes_weight_by_id=None) -> dict:
     """`{player_id: pts/match his xP understates him by}`, for the DEF/GK it can be read for.
 
     One call so a caller needs two lines rather than five. Entries are added only when the figure is
     **positive**, so an empty dict is the honest "no doubt anywhere" and `.get(id, 0.0)` is safe everywhere.
+
+    🔴🔴 **`minutes_weight_by_id` is not optional in spirit, only in signature** (ADR-380). A clean sheet is
+    worth nothing to a player who is not on the pitch, and the unscaled figure made the sell guard **dig in
+    harder as a player declined**: raised by the owner on Konsa and Saliba's return, the doubt stayed at
+    **+1.44 pts/match** whether he played every week, was benched once, or was benched three times in five —
+    so it withheld his sale most firmly at the moment selling became correct. ⭐⭐ *A guard that strengthens
+    as its subject gets worse is not conservative, it is stuck.*
+
+    ⭐ Scaled, it retires itself: 1.44 → 1.21 on a cameo → 1.15 on one benching → nothing once the window
+    refuses. ⚠️ `decision_xp` already minutes-scales the clean-sheet term it prices (`regime(gw)[1]`); this
+    is the same arithmetic reaching the one place that had been left out of it.
+
+    ⭐ Costs **no extra read**: every `decision_xp` row already carries `minutes_weight`, so both callers
+    hand it over from a board they already hold and ADR-218's optimisation stands untouched. A player with
+    no entry scales by 1.0 — the old behaviour, which `tests/test_cleansheet.py` pins as legacy rather than
+    intent.
     """
     rows = list(players or [])
     league_by_season = league_cs_by_season(history_by_code,
@@ -251,5 +267,8 @@ def unpriced_defence_by_id(players, history_by_code, fixtures) -> dict:
         doubt = unpriced_defence(p, (history_by_code or {}).get(_field(p, "code")) or [],
                                  team_rate.get(_field(p, "team_id")), league_now, league_by_season)
         if doubt > 0:
-            out[_field(p, "id")] = doubt
+            weight = 1.0 if minutes_weight_by_id is None else minutes_weight_by_id.get(_field(p, "id"), 1.0)
+            scaled = doubt * (weight if weight is not None else 1.0)
+            if scaled > 0:
+                out[_field(p, "id")] = scaled
     return out

@@ -2197,3 +2197,26 @@ def test_the_displaced_player_was_actually_starting():
             assert move["displaces"]["id"] in starting, (
                 f"{move['displaces']['web_name']} was not in the XI to begin with"
             )
+
+
+def test_the_transfers_endpoint_hands_the_guard_a_minutes_weight(store, monkeypatch):
+    """⭐⭐ **The wiring, not the arithmetic.** ADR-380 scaled the sell guard by expected minutes, and the
+    scaling is worthless if a caller does not pass the weights — ⚠️ *a fix that is a no-op in production is
+    worse than none, because the unit tests still pass.* This is the same fault `need_doubt` nearly shipped
+    with in ADR-376.
+    """
+    from src.service import inputs
+
+    seen = {}
+    real = inputs.defence_doubt
+
+    def spy(players, history, fixtures, minutes_weight_by_id=None):
+        seen["weights"] = minutes_weight_by_id
+        return real(players, history, fixtures, minutes_weight_by_id)
+
+    monkeypatch.setattr(inputs, "defence_doubt", spy)
+    svc.transfers(TransfersRequest(player_ids=_squad(store), bank=2.0), store=store)
+
+    assert "weights" in seen, "the endpoint did not ask for the doubt at all"
+    assert seen["weights"], "the guard was handed no minutes weights — the scaling is inert"
+    assert any(v is not None for v in seen["weights"].values()), "every weight was None"

@@ -855,8 +855,11 @@ def cmd_transfer(args) -> None:
             )}
         # ADR-376 — the sell-side guard, on the owner's surface for the same reason it is on the app's.
         _tie = {"window": args.next, "horizon_xp": _wide,
-                "sell_doubt": unpriced_defence_by_id(players, store.get_history_by_code(),
-                                                     store.get_all_fixtures())}
+                "sell_doubt": unpriced_defence_by_id(
+                    players, store.get_history_by_code(), store.get_all_fixtures(),
+                    # ADR-380 — scaled by expected minutes, from the board already computed above. An
+                    # unscaled doubt withheld a sale hardest exactly as rotation made selling correct.
+                    {r["id"]: r.get("minutes_weight") for r in ranked})}
         bench_ids = squad.get("bench_ids", [])
         xi_aware = not args.raw   # XI-gain ranking by default; --raw for the old raw-player-gain (ADR-046)
 

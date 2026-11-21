@@ -1,0 +1,22 @@
+players the window refuses but who have played: 167
+  the cap lowers 75 of them; it can never raise one (it is a min)
+  mean drop 0.289 weight (26.0 xMins)   max 0.826 (74 xMins)
+
+  player           today  capped        xMins
+  Andersen         0.848   0.022    76 -> 2   
+  Hamer            0.850   0.036    77 -> 3   
+  Milenković       0.982   0.200    88 -> 18  
+  Zubimendi        0.875   0.109    79 -> 10  
+  Pedro Porro      0.813   0.096    73 -> 9   
+  Sarr             0.672   0.033    61 -> 3   
+  Alderete         0.818   0.213    74 -> 19  
+  Burn             0.778   0.204    70 -> 18  
+
+scored over 8 gameweeks
+
+  variant        ALL: ρ    MAE  hit@20    1 SE |  BREACHERS: ρ    MAE  hit@10    n
+  today          0.6203   1.25    0.19  0.0390 |        0.0905   1.39    0.15  165
+  capped         0.6211   1.22    0.19  0.0390 |        0.0729   1.28    0.17  165
+
+  §B0's bar is for accuracy BIDS. This is a monotonicity fix, so the question is 'does it cost anything',
+  not 'does it gain +1 SE'.

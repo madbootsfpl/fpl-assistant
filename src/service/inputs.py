@@ -82,7 +82,7 @@ def reported_leavers(owned, players, store) -> dict:
         return {}
 
 
-def defence_doubt(players, history, fixtures) -> dict:
+def defence_doubt(players, history, fixtures, minutes_weight_by_id=None) -> dict:
     """`{id: pts/match his xP understates him by}` through his defence alone (ADR-376).
 
     ⭐⭐ **In the shared layer for the reason `reported_leavers` gives above** — ADR-151→156 is the record of
@@ -96,6 +96,10 @@ def defence_doubt(players, history, fixtures) -> dict:
     fixtures are 380 rows. ⭐ *Clean sheets come out of the scorelines identically and for a cost that does
     not climb all season.*
 
+    ⭐ **`minutes_weight_by_id` comes from the board the caller already has** (ADR-380) — every
+    `decision_xp` row carries it, so scaling the doubt by expected minutes costs **no extra read**. Without
+    it a clean-sheet credit is handed to a player who will not be on the pitch to collect it.
+
     ⭐ **Never load-bearing.** Empty when the rows were not loaded, and empty on any failure: a guard that
     stops the advice working is worse than the advice it was guarding against.
     """
@@ -104,7 +108,7 @@ def defence_doubt(players, history, fixtures) -> dict:
     try:
         from src.analytics.cleansheet import unpriced_defence_by_id
 
-        return unpriced_defence_by_id(players, history, fixtures)
+        return unpriced_defence_by_id(players, history, fixtures, minutes_weight_by_id)
     except Exception:                                    # noqa: BLE001 — a guard, never a dependency
         return {}
 
@@ -151,7 +155,8 @@ def load(player_ids, horizon, store, *, need_history=False, need_events=False,
         # ⭐ Opt-in: only the surfaces that advise a SALE need it, and `load` serves eight others.
         sell_doubt=(defence_doubt(players,
                                   history if history is not None else store.get_history_by_code(),
-                                  store.get_all_fixtures())
+                                  store.get_all_fixtures(),
+                                  {r["id"]: r.get("minutes_weight") for r in ranked})
                     if need_doubt else {}),
     )
 

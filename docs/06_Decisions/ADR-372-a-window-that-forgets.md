@@ -160,6 +160,14 @@ demoting players the historical fallback was promoting on last season's ninety m
   nothing. No blanks have landed yet; ADR-173's caveat is unresolved and now has a **second claimant**, and
   the fix is unchanged: *"every completed gameweek"* and *"every gameweek his club played"* are different
   questions and nothing here asks the second.
+- 🔴 **It left a cliff where the ratchet was** (found 2026-11-21, [ADR-380](./ADR-380-a-clean-sheet-he-is-not-there-to-collect.md)).
+  A player benched **once** in five gets share 0.800 → 72 xMins; benched **twice** he breaches the tolerance,
+  the window refuses, and `availability_weight` hands back his historical share — for Konsa **0.879, earned
+  at Aston Villa** → 79 xMins. ⭐⭐ *The second benching RAISES his expected minutes.* The ratchet is gone and
+  the cliff moved: the rule no longer gets stricter every week, but the moment it gives up it reaches for a
+  stale, higher number. ⚠️ **Recorded, not fixed** — two candidate caps both measurably broke players who
+  exist (injured men crushed to ~2 xMins), and nothing in the data is currently the shape that suffers from
+  it. ADR-380 has the population.
 - ⚠️ **Three rounds carry the whole result** (the window fills at GW6). This will be worth re-reading at
   GW15, when it has had ten.
 - ⚠️ **`_WINDOW_GAMEWEEKS` and `_FORGIVEN_MISSES` are now two more unfitted constants.** They were chosen

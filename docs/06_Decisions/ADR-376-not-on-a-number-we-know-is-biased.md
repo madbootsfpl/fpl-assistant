@@ -165,6 +165,10 @@ argument, touches no xP, and is off by default for every surface not opted in.
   2026-11-01: the guard does withhold Konsa's sale on the app, by a margin of **0.31 points over five
   gameweeks** (gain 7.5 against net doubt 7.19 on a local recompute) — ⚠️ *thin enough that the suggestion
   returns whenever a slightly better replacement appears.*
+- ✅ **Fixed 2026-11-21: the doubt was not minutes-scaled** ([ADR-380](./ADR-380-a-clean-sheet-he-is-not-there-to-collect.md)).
+  It stayed at +1.44 pts/match whether the player was nailed on or benched three times in five, so the guard
+  withheld a sale **most firmly as selling became correct**. ⭐ *A guard that strengthens as its subject gets
+  worse is not conservative, it is stuck.* Now scaled from the board the caller already holds, at no extra read.
 - ⚠️ **Silent.** A withheld move simply does not appear. The player's `defence_unpriced` is not yet surfaced,
   so nothing *tells* the reader why — ⭐ and ADR-138's pattern is a flag that **says** something. This is half
   of it.

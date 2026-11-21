@@ -1,5 +1,7 @@
 """Tests for the clean-sheet / defensive-solidity lens (xGC/90)."""
 
+import pytest
+
 from src.analytics.cleansheet import defensive_solidity
 from src.ui.cleansheet import render_cleansheet
 
@@ -181,3 +183,39 @@ def test_the_builder_only_lists_players_with_a_positive_doubt():
     fixtures = [_fx(1, 2, 1, 0), _fx(1, 2, 2, 0), _fx(2, 1, 0, 0), _fx(2, 1, 3, 1)]
     out = unpriced_defence_by_id(players, hist, fixtures)
     assert 7 in out and 8 not in out      # 8's old defence was better than the one he is behind now
+
+
+# ---- ADR-380: a clean sheet is worth nothing to a player on the bench -------
+
+
+def test_the_doubt_is_scaled_by_expected_minutes():
+    """🔴 Raised by the owner on Konsa and Saliba's return: the unscaled doubt stayed at **+1.44 pts/match**
+    whether he played every week or was benched three times in five — so the sell guard withheld his sale
+    **most firmly at the moment selling became correct.** ⭐⭐ *A guard that strengthens as its subject gets
+    worse is not conservative, it is stuck.*
+    """
+    hist = {7: [_season("2024/25", 10, 40)]}
+    players = [_defender(7, team_id=1)]
+    fixtures = [_fx(1, 2, 1, 0), _fx(1, 2, 2, 0), _fx(2, 1, 0, 0), _fx(2, 1, 3, 1)]
+    full = unpriced_defence_by_id(players, hist, fixtures, {7: 1.0})[7]
+    half = unpriced_defence_by_id(players, hist, fixtures, {7: 0.5})[7]
+    assert half == pytest.approx(full / 2), "the doubt must fall with his expected minutes"
+
+
+def test_a_player_with_no_expected_minutes_carries_no_doubt_at_all():
+    # ⭐ The point of the fix: the guard retires itself rather than digging in.
+    hist = {7: [_season("2024/25", 10, 40)]}
+    players = [_defender(7, team_id=1)]
+    fixtures = [_fx(1, 2, 1, 0), _fx(1, 2, 2, 0), _fx(2, 1, 0, 0), _fx(2, 1, 3, 1)]
+    assert unpriced_defence_by_id(players, hist, fixtures, {7: 0.0}) == {}
+
+
+def test_a_missing_weight_scales_by_one_rather_than_vanishing():
+    """⚠️ Legacy, pinned as legacy. An absent weight must not silently zero the guard — that would make a
+    caller's omission look like 'no doubt anywhere', which is the shape ADR-172 warns about."""
+    hist = {7: [_season("2024/25", 10, 40)]}
+    players = [_defender(7, team_id=1)]
+    fixtures = [_fx(1, 2, 1, 0), _fx(1, 2, 2, 0), _fx(2, 1, 0, 0), _fx(2, 1, 3, 1)]
+    assert unpriced_defence_by_id(players, hist, fixtures, {}) == \
+           unpriced_defence_by_id(players, hist, fixtures, None)
+    assert unpriced_defence_by_id(players, hist, fixtures, {7: None})[7] > 0
